@@ -1,4 +1,38 @@
 {
-  "name": "LX Music",
-  "displayName": "洛雪音乐助手"
+  "expo": {
+    "name": "lx-lxwalnut-music-mobile",
+    "slug": "lx-lxwalnut-music-mobile",
+    "version": "26.09.20",
+    "orientation": "portrait",
+    "icon": "./src/assets/images/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./src/assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "cn.toside.music.mobile"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./src/assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "cn.toside.music.mobile"
+    },
+    "owner": "taojinliang123s-team",
+    "extra": {
+      "eas": {
+        "projectId": "57b0e5cc-4bc9-419d-9f95-ab15dc5c3b18"
+      }
+    }
+  }
 }
