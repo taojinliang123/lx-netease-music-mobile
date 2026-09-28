@@ -4,6 +4,7 @@ import Text from '@/components/common/Text'
 import { getLastSelectQuality, saveLastSelectQuality } from '@/utils/data'
 import { addTask as addDownloadTask } from '@/core/download';
 import { fetchAndApplyDetailedQuality } from "@/utils/musicSdk/wy/musicDetail.js";
+import settingState from '@/store/setting/state' // ⭐ 新增导入
 
 export interface MusicDownloadModalType {
   show: (info: LX.Music.MusicInfo) => void
@@ -26,7 +27,7 @@ export default forwardRef<MusicDownloadModalType, MusicDownloadModalProps>(
       key?: string
     }
 
-    // ⭐ 完整的音质排序顺序（从低到高，补充了 192k, master_plus 等）
+    // 完整的音质排序顺序（从低到高）
     const QUALITY_ORDER = [
       '128k', 
       '192k', 
@@ -52,14 +53,26 @@ export default forwardRef<MusicDownloadModalType, MusicDownloadModalProps>(
       nameMap.set('master', global.i18n.t('master') || '母带')
       nameMap.set('master_plus', global.i18n.t('master_plus') || '臻品母带')
 
-      // @ts-ignore
-      const qualitys = info.meta.qualitys || []
+      // ⭐ 默认使用音源原有的 qualitys
+      let qualitys = info.meta.qualitys || []
+      
+      // ⭐ 优先读取自定义源挂载的全局音质列表
+      if (global.lx.qualityList && global.lx.qualityList[info.source]) {
+        const customQualitys = global.lx.qualityList[info.source]
+        
+        // 兼容自定义源可能返回纯字符串数组 ['128k', '320k'] 的情况
+        if (Array.isArray(customQualitys) && typeof customQualitys[0] === 'string') {
+          qualitys = customQualitys.map(q => ({ type: q, size: null }))
+        } else {
+          qualitys = customQualitys
+        }
+      }
+
       const qualityMap: Record<string, MusicOption> = {}
 
       for (const element of qualitys) {
         if (!element || !element.type) continue;
         
-        // 优先使用映射表里的名字，如果映射表里没有，就直接显示原始 type
         const displayName = nameMap.has(element.type) 
           ? nameMap.get(element.type) 
           : element.type.toUpperCase();
@@ -88,7 +101,11 @@ export default forwardRef<MusicDownloadModalType, MusicDownloadModalProps>(
         calcQualitys(info)
         setVisible(true)
 
-        if (info.source === 'wy' && !info.meta._full) {
+        // ⭐ 判断当前是否在使用自定义源
+        const isCustomSource = /^user_api/.test(settingState.setting['common.apiSource']);
+
+        // ⭐ 只有官方网易云且未开启自定义源时，才去请求详细数据
+        if (info.source === 'wy' && !info.meta._full && !isCustomSource) {
           const detailedInfo = await fetchAndApplyDetailedQuality(info as LX.Music.MusicInfoOnline);
           if (detailedInfo.meta._full) {
             setMusicInfo(detailedInfo)
