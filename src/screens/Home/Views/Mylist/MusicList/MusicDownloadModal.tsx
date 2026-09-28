@@ -1,164 +1,23 @@
-import { View } from 'react-native'
-import { useState, useEffect, useRef, useImperativeHandle, forwardRef, useMemo } from 'react'
-import ConfirmAlert, { type ConfirmAlertType } from '@/components/common/ConfirmAlert'
+import { View, TouchableOpacity, Modal, TouchableWithoutFeedback, StyleSheet } from 'react-native'
+import { useState, useEffect, useImperativeHandle, forwardRef } from 'react'
 import Text from '@/components/common/Text'
-import { createStyle } from '@/utils/tools'
-import CheckBox from '@/components/common/CheckBox'
-import { handleDownload } from './listAction'
 import { getLastSelectQuality, saveLastSelectQuality } from '@/utils/data'
 import { addTask as addDownloadTask } from '@/core/download';
-import {fetchAndApplyDetailedQuality} from "@/utils/musicSdk/wy/musicDetail.js";
-import { useSettingValue } from '@/store/setting/hook'
-
-interface TitleType {
-  updateTitle: (musicInfo: LX.Music.MusicInfo) => void
-}
-const Title = forwardRef<TitleType, {}>((props, ref) => {
-  const [title, setTitle] = useState('')
-  useImperativeHandle(ref, () => ({
-    updateTitle(musicInfo) {
-      setTitle(
-        global.i18n.t('download_music_title', { name: musicInfo.name, artist: musicInfo.singer })
-      )
-    },
-  }))
-
-  return <Text style={{ marginBottom: 5 }}>{title}</Text>
-})
-
-interface PositionInputType {
-  getText: () => string
-  setText: (text: string) => void
-  focus: () => void
-}
-
-export interface SelectInfo {
-  musicInfo: LX.Music.MusicInfo
-  selectedList: LX.Music.MusicInfo[]
-  index: number
-  listId: string
-  single: boolean
-}
-const initSelectInfo = {}
-
-interface MusicDownloadModalProps {
-  onDownloadInfo: (info: LX.Music.MusicInfo) => void
-}
+import { fetchAndApplyDetailedQuality } from "@/utils/musicSdk/wy/musicDetail.js";
 
 export interface MusicDownloadModalType {
   show: (info: LX.Music.MusicInfo) => void
 }
 
+interface MusicDownloadModalProps {
+  onDownloadInfo: (info: LX.Music.MusicInfo) => void
+}
 
 export default forwardRef<MusicDownloadModalType, MusicDownloadModalProps>(
   ({ onDownloadInfo }, ref) => {
-    const alertRef = useRef<ConfirmAlertType>(null)
-    const titleRef = useRef<TitleType>(null)
-    const selectedInfo = useRef<LX.Music.MusicInfo>(initSelectInfo as LX.Music.MusicInfo)
-    const [selectedQuality, setSelectedQuality] = useState<LX.Quality>('128k')
-    const [selectedTarget, setSelectedTarget] = useState<'local' | 'onedrive'>('local')
-    const [playQualityList, setPlayQualityList] = useState<MusicOption[]>([])
     const [visible, setVisible] = useState(false)
-    const showOneDriveDownload = useSettingValue('menu.downloadOneDrive')
-
-    interface QualityMap {
-      [key: string]: MusicOption
-    }
-
-    // 新增 useEffect 来处理音质选择逻辑
-    useEffect(() => {
-      if (!visible || !playQualityList.length) return
-
-      const applyLastQuality = async() => {
-        const lastQuality = await getLastSelectQuality()
-        const qualityExists = playQualityList.some(q => q.id === lastQuality)
-        if (qualityExists) {
-          setSelectedQuality(lastQuality)
-        } else {
-          setSelectedQuality(playQualityList[0].id) // 降级到第一个可用音质
-        }
-      }
-
-      void applyLastQuality()
-    }, [visible, playQualityList]) // 依赖于弹窗可见性和音质列表
-
-    const calcQualitys = (musicInfo: LX.Music.MusicInfo) => {
-      const map = new Map()
-
-      map.set('128k', global.i18n.t('128k'))
-      map.set('320k', global.i18n.t('320k'))
-      map.set('flac', global.i18n.t('flac'))
-      map.set('hires', global.i18n.t('hires'))
-      map.set('atmos', global.i18n.t('atmos'))
-      map.set('atmos_plus', global.i18n.t('atmos_plus'))
-      map.set('master', global.i18n.t('master'))
-
-      // @ts-ignore
-      const qualitys = musicInfo.meta.qualitys
-
-      const qualityMap: QualityMap = {}
-      for (const element of qualitys) {
-        const temp: MusicOption = {
-          id: element.type,
-          name: map.has(element.type) ? map.get(element.type) : '未知',
-          size: element.size,
-          key: element.type,
-        }
-        qualityMap[element.type] = temp
-      }
-      setPlayQualityList(Object.values(qualityMap))
-    }
-
-    useImperativeHandle(ref, () => ({
-      async show(info) {
-        selectedInfo.current = info
-        titleRef.current?.updateTitle(info)
-        // 先计算并触发音质列表状态更新
-        calcQualitys(info)
-
-        // 然后显示弹窗
-        if (visible) {
-          alertRef.current?.setVisible(true)
-        } else {
-          setVisible(true)
-        }
-
-        console.log("MusicDownloadModal show info:", info);
-        if (info.source === 'wy' && !info.meta._full) {
-          const detailedInfo = await fetchAndApplyDetailedQuality(info as LX.Music.MusicInfoOnline);
-
-          if (detailedInfo.meta._full) {
-            selectedInfo.current = detailedInfo;
-            calcQualitys(detailedInfo);
-          }
-        }
-      },
-    }))
-
-    // 当弹窗组件首次挂载或重新变为可见时，显示内部Dialog
-    useEffect(() => {
-      if (visible) {
-        alertRef.current?.setVisible(true)
-      }
-    }, [visible])
-
-    const handleDownloadMusic = async() => {
-      const target = showOneDriveDownload && selectedTarget === 'onedrive' ? 'onedrive' : 'local'
-      void saveLastSelectQuality(selectedQuality)
-      alertRef.current?.setVisible(false)
-      // handleDownload(selectedInfo.current, selectedQuality)
-      addDownloadTask(
-        selectedInfo.current,
-        selectedQuality,
-        false,
-        target
-      );
-      // 下载后重置回默认值，以便下次打开时重新加载
-      setTimeout(() => {
-        setSelectedQuality('128k')
-        setSelectedTarget('local')
-      }, 300)
-    }
+    const [musicInfo, setMusicInfo] = useState<LX.Music.MusicInfo | null>(null)
+    const [playQualityList, setPlayQualityList] = useState<MusicOption[]>([])
 
     interface MusicOption {
       id: LX.Quality
@@ -167,81 +26,188 @@ export default forwardRef<MusicDownloadModalType, MusicDownloadModalProps>(
       key?: string
     }
 
-    const useActive = (id: LX.Quality) => {
-      return useMemo(() => selectedQuality === id, [selectedQuality, id])
+    // ⭐ 完整的音质排序顺序（从低到高，补充了 192k, master_plus 等）
+    const QUALITY_ORDER = [
+      '128k', 
+      '192k', 
+      '320k', 
+      'flac', 
+      'hires', 
+      'atmos', 
+      'atmos_plus', 
+      'master', 
+      'master_plus'
+    ];
+
+    // 根据音源动态计算音质列表
+    const calcQualitys = (info: LX.Music.MusicInfo) => {
+      const nameMap = new Map()
+      nameMap.set('128k', global.i18n.t('128k') || '128K')
+      nameMap.set('192k', global.i18n.t('192k') || '192K')
+      nameMap.set('320k', global.i18n.t('320k') || '320K')
+      nameMap.set('flac', global.i18n.t('flac') || 'FLAC')
+      nameMap.set('hires', global.i18n.t('hires') || 'Hi-Res')
+      nameMap.set('atmos', global.i18n.t('atmos') || '全景声')
+      nameMap.set('atmos_plus', global.i18n.t('atmos_plus') || '全景声Plus')
+      nameMap.set('master', global.i18n.t('master') || '母带')
+      nameMap.set('master_plus', global.i18n.t('master_plus') || '臻品母带')
+
+      // @ts-ignore
+      const qualitys = info.meta.qualitys || []
+      const qualityMap: Record<string, MusicOption> = {}
+
+      for (const element of qualitys) {
+        if (!element || !element.type) continue;
+        
+        // 优先使用映射表里的名字，如果映射表里没有，就直接显示原始 type
+        const displayName = nameMap.has(element.type) 
+          ? nameMap.get(element.type) 
+          : element.type.toUpperCase();
+
+        qualityMap[element.type] = {
+          id: element.type,
+          name: displayName,
+          size: element.size,
+          key: element.type,
+        }
+      }
+
+      // 转化为数组并按 QUALITY_ORDER 排序
+      const sortedList = Object.values(qualityMap).sort((a, b) => {
+        const indexA = QUALITY_ORDER.indexOf(a.id);
+        const indexB = QUALITY_ORDER.indexOf(b.id);
+        return (indexA === -1 ? 99 : indexA) - (indexB === -1 ? 99 : indexB);
+      });
+
+      setPlayQualityList(sortedList)
     }
 
-    const Item = ({ id, name }: { id: LX.Quality; name: string }) => {
-      const isActive = useActive(id)
-      return (
-        <CheckBox
-          marginRight={8}
-          check={isActive}
-          label={name}
-          onChange={() => {
-            setSelectedQuality(id)
-          }}
-          need
-        />
-      )
+    useImperativeHandle(ref, () => ({
+      async show(info) {
+        setMusicInfo(info)
+        calcQualitys(info)
+        setVisible(true)
+
+        if (info.source === 'wy' && !info.meta._full) {
+          const detailedInfo = await fetchAndApplyDetailedQuality(info as LX.Music.MusicInfoOnline);
+          if (detailedInfo.meta._full) {
+            setMusicInfo(detailedInfo)
+            calcQualitys(detailedInfo)
+          }
+        }
+      },
+    }))
+
+    const handleDownloadMusic = (qualityId: LX.Quality) => {
+      void saveLastSelectQuality(qualityId)
+      setVisible(false)
+      
+      if (musicInfo) {
+        addDownloadTask(musicInfo, qualityId);
+        onDownloadInfo?.(musicInfo)
+      }
     }
 
-    return visible ? (
-      <ConfirmAlert
-        ref={alertRef}
-        onConfirm={handleDownloadMusic}
-        onHide={() => setVisible(false) } // 隐藏时卸载组件
+    const closeModal = () => setVisible(false)
+
+    if (!visible || !musicInfo) return null
+
+    return (
+      <Modal
+        transparent={true}
+        visible={visible}
+        animationType="fade"
+        onRequestClose={closeModal}
       >
-        <View style={styles.content}>
-          <Title ref={titleRef} />
-          {showOneDriveDownload ? (
-            <View style={styles.targetList}>
-              <CheckBox
-                marginRight={8}
-                check={selectedTarget === 'local'}
-                label="下载到本地"
-                onChange={() => setSelectedTarget('local')}
-                need
-              />
-              <CheckBox
-                marginRight={8}
-                check={selectedTarget === 'onedrive'}
-                label="下载到 OneDrive"
-                onChange={() => setSelectedTarget('onedrive')}
-                need
-              />
-            </View>
-          ) : null}
-          <View style={styles.list}>
-            {playQualityList.map((item) => (
-              <Item name={item.name + (item.size ? ` (${item.size})` : '')} id={item.id} key={item.key} />
-            ))}
+        <TouchableWithoutFeedback onPress={closeModal}>
+          <View style={styles.overlay}>
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <View style={styles.modalContainer}>
+                
+                {/* 头部 */}
+                <View style={styles.header}>
+                  <View style={styles.headerLeft} />
+                  <View style={styles.headerTitleBox}>
+                    <Text style={styles.songName} numberOfLines={1}>{musicInfo.name}</Text>
+                    <Text style={styles.artistName} numberOfLines={1}>{musicInfo.singer}</Text>
+                  </View>
+                  <TouchableOpacity style={styles.headerRight} onPress={closeModal}>
+                    <Text style={styles.closeIcon}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* 音质列表 / 空状态 */}
+                <View style={styles.listContainer}>
+                  {playQualityList.length > 0 ? (
+                    playQualityList.map((item) => (
+                      <TouchableOpacity
+                        key={item.key || item.id}
+                        style={styles.qualityButton}
+                        activeOpacity={0.7}
+                        onPress={() => handleDownloadMusic(item.id)}
+                      >
+                        <Text style={styles.qualityText}>
+                          {item.name} {item.size ? `- ${item.size}` : ''}
+                        </Text>
+                      </TouchableOpacity>
+                    ))
+                  ) : (
+                    <View style={styles.emptyBox}>
+                      <Text style={styles.emptyText}>该音源暂无可下载的音质</Text>
+                    </View>
+                  )}
+                </View>
+
+              </View>
+            </TouchableWithoutFeedback>
           </View>
-        </View>
-      </ConfirmAlert>
-    ) : null
+        </TouchableWithoutFeedback>
+      </Modal>
+    )
   }
 )
 
-const styles = createStyle({
-  content: {
-    flexGrow: 1,
-    flexShrink: 1,
-    flexDirection: 'column',
+const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  input: {
-    flexGrow: 1,
-    flexShrink: 1,
-    minWidth: 260,
-    borderRadius: 4,
+  modalContainer: {
+    width: '85%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingVertical: 20,
+    paddingHorizontal: 15,
   },
-  list: {
-    flexDirection: 'column',
-    flexWrap: 'nowrap',
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
   },
-  targetList: {
-    flexDirection: 'column',
-    flexWrap: 'nowrap',
-    marginBottom: 8,
+  headerLeft: { width: 30 },
+  headerTitleBox: { flex: 1, alignItems: 'center' },
+  songName: { fontSize: 18, fontWeight: 'bold', color: '#333333', marginBottom: 4 },
+  artistName: { fontSize: 13, color: '#888888' },
+  headerRight: { width: 30, alignItems: 'flex-end' },
+  closeIcon: { fontSize: 20, color: '#999999', fontWeight: '300' },
+  listContainer: { width: '100%' },
+  qualityButton: {
+    backgroundColor: '#F0F9F4',
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginBottom: 12,
   },
-})
+  qualityText: { color: '#3CB371', fontSize: 15, fontWeight: '500' },
+  emptyBox: {
+    paddingVertical: 30,
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: '#999999',
+    fontSize: 14,
+  }
+});
