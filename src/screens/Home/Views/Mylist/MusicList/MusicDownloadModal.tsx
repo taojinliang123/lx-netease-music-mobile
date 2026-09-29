@@ -1,5 +1,5 @@
 import { View, Text, Modal, TouchableOpacity, StyleSheet, TouchableWithoutFeedback } from 'react-native'
-import { useState, useImperativeHandle, forwardRef } from 'react'
+import { useState, useImperativeHandle, forwardRef, useMemo } from 'react'
 import { getLastSelectQuality, saveLastSelectQuality } from '@/utils/data'
 import { addTask as addDownloadTask } from '@/core/download';
 import { fetchAndApplyDetailedQuality } from "@/utils/musicSdk/wy/musicDetail.js";
@@ -28,6 +28,13 @@ export default forwardRef<MusicDownloadModalType, MusicDownloadModalProps>(
     const [playQualityList, setPlayQualityList] = useState<MusicOption[]>([])
     const [selectedTarget, setSelectedTarget] = useState<'local' | 'onedrive'>('local')
     const showOneDriveDownload = useSettingValue('menu.downloadOneDrive')
+    
+    // ⭐ 获取当前主题
+    const theme = useSettingValue('theme')
+    const isDark = theme === 'dark' // 通常主题变量是 'light' 或 'dark'
+
+    // ⭐ 根据主题动态生成样式
+    const styles = useMemo(() => createStyles(isDark), [isDark])
 
     const QUALITY_ORDER = ['128k', '192k', '320k', 'flac', 'hires', 'atmos', 'atmos_plus', 'master', 'master_plus'];
 
@@ -191,23 +198,57 @@ export default forwardRef<MusicDownloadModalType, MusicDownloadModalProps>(
   }
 )
 
-const styles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.4)', justifyContent: 'center', alignItems: 'center' },
-  modalContainer: { width: '85%', backgroundColor: '#FFFFFF', borderRadius: 16, paddingVertical: 20, paddingHorizontal: 15 },
+// ⭐ 动态生成主题样式
+const createStyles = (isDark: boolean) => StyleSheet.create({
+  overlay: { 
+    flex: 1, 
+    backgroundColor: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.4)', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  modalContainer: { 
+    width: '85%', 
+    backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF', // ⭐ 暗色模式背景变黑
+    borderRadius: 16, 
+    paddingVertical: 20, 
+    paddingHorizontal: 15 
+  },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
   headerLeft: { width: 30 },
   headerTitleBox: { flex: 1, alignItems: 'center' },
-  songName: { fontSize: 18, fontWeight: 'bold', color: '#333333', marginBottom: 4 },
-  artistName: { fontSize: 13, color: '#888888' },
+  songName: { 
+    fontSize: 18, 
+    fontWeight: 'bold', 
+    color: isDark ? '#E0E0E0' : '#333333', // ⭐ 标题颜色适配
+    marginBottom: 4 
+  },
+  artistName: { 
+    fontSize: 13, 
+    color: isDark ? '#AAAAAA' : '#888888' // ⭐ 歌手颜色适配
+  },
   headerRight: { width: 30, alignItems: 'flex-end' },
-  closeIcon: { fontSize: 20, color: '#999999', fontWeight: '300' },
+  closeIcon: { 
+    fontSize: 20, 
+    color: isDark ? '#AAAAAA' : '#999999', 
+    fontWeight: '300' 
+  },
   targetRow: { flexDirection: 'row', justifyContent: 'center', marginBottom: 15 },
   targetBtn: { paddingHorizontal: 12, paddingVertical: 6, marginHorizontal: 5 },
-  targetText: { color: '#999999', fontSize: 13 },
-  targetTextActive: { color: '#3CB371', fontSize: 13, fontWeight: 'bold' },
+  targetText: { color: isDark ? '#777777' : '#999999', fontSize: 13 },
+  targetTextActive: { color: isDark ? '#4CAF50' : '#3CB371', fontSize: 13, fontWeight: 'bold' },
   listContainer: { width: '100%' },
-  qualityButton: { backgroundColor: '#F0F9F4', borderRadius: 8, paddingVertical: 14, alignItems: 'center', marginBottom: 12 },
-  qualityText: { color: '#3CB371', fontSize: 15, fontWeight: '500' },
+  qualityButton: { 
+    backgroundColor: isDark ? '#2C2C2C' : '#F0F9F4', // ⭐ 按钮背景色适配
+    borderRadius: 8, 
+    paddingVertical: 14, 
+    alignItems: 'center', 
+    marginBottom: 12 
+  },
+  qualityText: { 
+    color: isDark ? '#4CAF50' : '#3CB371', // ⭐ 按钮文字颜色适配
+    fontSize: 15, 
+    fontWeight: '500' 
+  },
   emptyBox: { paddingVertical: 30, alignItems: 'center' },
-  emptyText: { color: '#999999', fontSize: 14 }
+  emptyText: { color: isDark ? '#777777' : '#999999', fontSize: 14 }
 });
