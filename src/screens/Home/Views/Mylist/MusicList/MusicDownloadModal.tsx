@@ -5,7 +5,7 @@ import { addTask as addDownloadTask } from '@/core/download';
 import { fetchAndApplyDetailedQuality } from "@/utils/musicSdk/wy/musicDetail.js";
 import settingState from '@/store/setting/state'
 import { useSettingValue } from '@/store/setting/hook'
-import { useTheme } from '@/store/theme/hook' // ⭐ 如果报错找不到这个路径，去 PageContent.tsx 里看 useTheme 是从哪导入的
+import { useTheme } from '@/store/theme/hook'
 
 export interface MusicDownloadModalType {
   show: (info: LX.Music.MusicInfo) => void
@@ -107,6 +107,7 @@ export default forwardRef<MusicDownloadModalType, MusicDownloadModalProps>(
         calcQualitys(info)
         setVisible(true)
 
+        // ⭐ 判断是否使用自定义源
         const isCustomSource = /^user_api/.test(settingState.setting['common.apiSource']);
         if (info.source === 'wy' && !info.meta?._full && !isCustomSource) {
           try {
@@ -198,17 +199,18 @@ export default forwardRef<MusicDownloadModalType, MusicDownloadModalProps>(
   }
 )
 
-// ⭐ 根据主题动态生成样式
+// ⭐ 根据主题动态生成样式（基于实际主题变量 c-xxx）
 const createStyles = (theme: any) => StyleSheet.create({
   overlay: { 
     flex: 1, 
-    backgroundColor: 'rgba(0, 0, 0, 0.5)', // 遮罩层保持半透明
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', 
     justifyContent: 'center', 
     alignItems: 'center' 
   },
   modalContainer: { 
     width: '85%', 
-    backgroundColor: theme.backgroundColor || theme.modalBackground || '#FFFFFF', // ⭐ 弹窗背景
+    // 背景色：读取主题的内容背景色，防止有些主题没有此字段，提供白色作为兜底
+    backgroundColor: theme['c-content-bg'] || theme['c-bg'] || '#FFFFFF', 
     borderRadius: 16, 
     paddingVertical: 20, 
     paddingHorizontal: 15 
@@ -219,36 +221,47 @@ const createStyles = (theme: any) => StyleSheet.create({
   songName: { 
     fontSize: 18, 
     fontWeight: 'bold', 
-    color: theme.fontColor || theme.textColor || '#333333', // ⭐ 歌曲名
+    color: theme['c-font'] || '#333333', 
     marginBottom: 4 
   },
   artistName: { 
     fontSize: 13, 
-    color: theme.fontColor2 || theme.descColor || '#888888' // ⭐ 歌手名
+    color: theme['c-font-label'] || theme['c-font'] || '#888888' 
   },
   headerRight: { width: 30, alignItems: 'flex-end' },
   closeIcon: { 
     fontSize: 20, 
-    color: theme.fontColor2 || '#999999', 
+    color: theme['c-font-label'] || '#999999', 
     fontWeight: '300' 
   },
   targetRow: { flexDirection: 'row', justifyContent: 'center', marginBottom: 15 },
   targetBtn: { paddingHorizontal: 12, paddingVertical: 6, marginHorizontal: 5 },
-  targetText: { color: theme.fontColor2 || '#999999', fontSize: 13 },
-  targetTextActive: { color: theme.primaryColor || '#3CB371', fontSize: 13, fontWeight: 'bold' },
+  targetText: { 
+    color: theme['c-font-label'] || '#999999', 
+    fontSize: 13 
+  },
+  targetTextActive: { 
+    color: theme['c-primary'] || '#3CB371', 
+    fontSize: 13, 
+    fontWeight: 'bold' 
+  },
   listContainer: { width: '100%' },
   qualityButton: { 
-    backgroundColor: theme.buttonBackground || theme.cardBackground || '#F0F9F4', // ⭐ 按钮背景
+    // 按钮背景色：尝试多个主题变量名，确保有颜色
+    backgroundColor: theme['c-primary-light-200-alpha-800'] || theme['c-primary-light'] || theme['c-button-bg'] || '#F0F9F4', 
     borderRadius: 8, 
     paddingVertical: 14, 
     alignItems: 'center', 
     marginBottom: 12 
   },
   qualityText: { 
-    color: theme.primaryColor || '#3CB371', // ⭐ 按钮文字颜色
+    color: theme['c-primary'] || '#3CB371', 
     fontSize: 15, 
     fontWeight: '500' 
   },
   emptyBox: { paddingVertical: 30, alignItems: 'center' },
-  emptyText: { color: theme.fontColor2 || '#999999', fontSize: 14 }
+  emptyText: { 
+    color: theme['c-font-label'] || '#999999', 
+    fontSize: 14 
+  }
 });
