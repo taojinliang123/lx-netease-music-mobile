@@ -5,6 +5,7 @@ import { addTask as addDownloadTask } from '@/core/download';
 import { fetchAndApplyDetailedQuality } from "@/utils/musicSdk/wy/musicDetail.js";
 import settingState from '@/store/setting/state'
 import { useSettingValue } from '@/store/setting/hook'
+import { useTheme } from '@/store/theme/hook' // ⭐ 如果报错找不到这个路径，去 PageContent.tsx 里看 useTheme 是从哪导入的
 
 export interface MusicDownloadModalType {
   show: (info: LX.Music.MusicInfo) => void
@@ -28,13 +29,12 @@ export default forwardRef<MusicDownloadModalType, MusicDownloadModalProps>(
     const [playQualityList, setPlayQualityList] = useState<MusicOption[]>([])
     const [selectedTarget, setSelectedTarget] = useState<'local' | 'onedrive'>('local')
     const showOneDriveDownload = useSettingValue('menu.downloadOneDrive')
-    
-    // ⭐ 获取当前主题
-    const theme = useSettingValue('theme')
-    const isDark = theme === 'dark' // 通常主题变量是 'light' 或 'dark'
 
-    // ⭐ 根据主题动态生成样式
-    const styles = useMemo(() => createStyles(isDark), [isDark])
+    // ⭐ 获取主题对象
+    const theme = useTheme()
+    
+    // ⭐ 动态生成样式
+    const styles = useMemo(() => createStyles(theme), [theme])
 
     const QUALITY_ORDER = ['128k', '192k', '320k', 'flac', 'hires', 'atmos', 'atmos_plus', 'master', 'master_plus'];
 
@@ -198,17 +198,17 @@ export default forwardRef<MusicDownloadModalType, MusicDownloadModalProps>(
   }
 )
 
-// ⭐ 动态生成主题样式
-const createStyles = (isDark: boolean) => StyleSheet.create({
+// ⭐ 根据主题动态生成样式
+const createStyles = (theme: any) => StyleSheet.create({
   overlay: { 
     flex: 1, 
-    backgroundColor: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.4)', 
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // 遮罩层保持半透明
     justifyContent: 'center', 
     alignItems: 'center' 
   },
   modalContainer: { 
     width: '85%', 
-    backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF', // ⭐ 暗色模式背景变黑
+    backgroundColor: theme.backgroundColor || theme.modalBackground || '#FFFFFF', // ⭐ 弹窗背景
     borderRadius: 16, 
     paddingVertical: 20, 
     paddingHorizontal: 15 
@@ -219,36 +219,36 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
   songName: { 
     fontSize: 18, 
     fontWeight: 'bold', 
-    color: isDark ? '#E0E0E0' : '#333333', // ⭐ 标题颜色适配
+    color: theme.fontColor || theme.textColor || '#333333', // ⭐ 歌曲名
     marginBottom: 4 
   },
   artistName: { 
     fontSize: 13, 
-    color: isDark ? '#AAAAAA' : '#888888' // ⭐ 歌手颜色适配
+    color: theme.fontColor2 || theme.descColor || '#888888' // ⭐ 歌手名
   },
   headerRight: { width: 30, alignItems: 'flex-end' },
   closeIcon: { 
     fontSize: 20, 
-    color: isDark ? '#AAAAAA' : '#999999', 
+    color: theme.fontColor2 || '#999999', 
     fontWeight: '300' 
   },
   targetRow: { flexDirection: 'row', justifyContent: 'center', marginBottom: 15 },
   targetBtn: { paddingHorizontal: 12, paddingVertical: 6, marginHorizontal: 5 },
-  targetText: { color: isDark ? '#777777' : '#999999', fontSize: 13 },
-  targetTextActive: { color: isDark ? '#4CAF50' : '#3CB371', fontSize: 13, fontWeight: 'bold' },
+  targetText: { color: theme.fontColor2 || '#999999', fontSize: 13 },
+  targetTextActive: { color: theme.primaryColor || '#3CB371', fontSize: 13, fontWeight: 'bold' },
   listContainer: { width: '100%' },
   qualityButton: { 
-    backgroundColor: isDark ? '#2C2C2C' : '#F0F9F4', // ⭐ 按钮背景色适配
+    backgroundColor: theme.buttonBackground || theme.cardBackground || '#F0F9F4', // ⭐ 按钮背景
     borderRadius: 8, 
     paddingVertical: 14, 
     alignItems: 'center', 
     marginBottom: 12 
   },
   qualityText: { 
-    color: isDark ? '#4CAF50' : '#3CB371', // ⭐ 按钮文字颜色适配
+    color: theme.primaryColor || '#3CB371', // ⭐ 按钮文字颜色
     fontSize: 15, 
     fontWeight: '500' 
   },
   emptyBox: { paddingVertical: 30, alignItems: 'center' },
-  emptyText: { color: isDark ? '#777777' : '#999999', fontSize: 14 }
+  emptyText: { color: theme.fontColor2 || '#999999', fontSize: 14 }
 });
