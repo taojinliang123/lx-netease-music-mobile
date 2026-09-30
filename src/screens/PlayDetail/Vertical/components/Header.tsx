@@ -106,13 +106,15 @@ const Title = () => {
   )
 }
 
+// ⭐ 右上角显示平台+音质
 const QualityBadge = ({ onPress, actualQuality }: { onPress: () => void, actualQuality: string | null }) => {
   const theme = useTheme()
   const playMusicInfo = usePlayMusicInfo()
   const musicInfo = playMusicInfo.musicInfo ? ('progress' in playMusicInfo.musicInfo ? playMusicInfo.musicInfo.metadata.musicInfo : playMusicInfo.musicInfo) : null
   const currentQuality = actualQuality || useSettingValue('player.playQuality') || '128k'
 
-  if (!musicInfo) return null
+  // ⭐ 安全保护：拿不到数据就静默隐藏，不渲染，防止崩溃
+  if (!musicInfo || !musicInfo.source) return null
 
   const platformName = (musicInfo.source || '').toUpperCase()
   const qualityName = QUALITY_NAME_MAP[currentQuality] || currentQuality.toUpperCase()
@@ -186,18 +188,15 @@ const QualitySelectModal = ({ visible, onClose, onQualityChange }: { visible: bo
   }, [musicInfo])
 
   const handleSelect = async (quality: string) => {
-    // ⭐ 注释掉全局偏好设置的修改，防止状态冲突导致 UI 崩溃
-    // settingState.setting['player.playQuality'] = quality as LX.Quality
     onClose()
 
     if (!musicInfo) return
 
     try {
-      // 1. 获取当前位置
+      console.log('[QualitySwitch] === 开始切换音质 ===')
       const currentTime = await getPosition()
       console.log('[QualitySwitch] 当前播放位置:', currentTime)
 
-      // 2. 获取新链接
       const result = await getMusicUrl({
         musicInfo: musicInfo as LX.Music.MusicInfo,
         quality: quality as LX.Quality,
@@ -205,7 +204,6 @@ const QualitySelectModal = ({ visible, onClose, onQualityChange }: { visible: bo
       })
       console.log('[QualitySwitch] getMusicUrl 返回:', result)
 
-      // 3. 解析返回值
       let newUrl = ''
       let actualQ = quality
       
@@ -220,16 +218,15 @@ const QualitySelectModal = ({ visible, onClose, onQualityChange }: { visible: bo
 
       console.log('[QualitySwitch] 准备切换至:', actualQ, '链接:', newUrl)
 
-      // 4. 调用播放器重新加载
-      playMusic(musicInfo as any, newUrl, currentTime || 0)
-      
-      // 5. 通知父组件更新 UI
-      onQualityChange(actualQ)
-      console.log('[QualitySwitch] 切换指令发送成功')
+      // ⭐ 保护：使用 setTimeout 避免与 UI 关闭动画冲突导致渲染崩溃
+      setTimeout(() => {
+        playMusic(musicInfo as any, newUrl, currentTime || 0)
+        onQualityChange(actualQ)
+        console.log('[QualitySwitch] 指令已发送，UI 已更新')
+      }, 100)
       
     } catch (e: any) {
       console.error('[QualitySwitch] 切换音质失败:', e)
-      // toast(`切换失败: ${e.message}`) // 如果需要可以加个提示
     }
   }
 
@@ -277,14 +274,6 @@ export default memo(() => {
   
   const [actualQuality, setActualQuality] = useState<string | null>(null)
   
-  const playMusicInfo = usePlayMusicInfo()
-  const musicInfo = playMusicInfo.musicInfo ? ('progress' in playMusicInfo.musicInfo ? playMusicInfo.musicInfo.metadata.musicInfo : playMusicInfo.musicInfo) : null
-
-  // ⭐ 修复白屏：暂时注释掉这个重置逻辑，防止播放器切歌时触发状态重渲染导致崩溃
-  // useEffect(() => {
-  //   setActualQuality(null)
-  // }, [musicInfo?.id, musicInfo?.source])
-
   const back = () => {
     void pop(commonState.componentIds[commonState.componentIds.length - 1]?.id!)
   }
