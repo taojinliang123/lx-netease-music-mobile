@@ -1,5 +1,5 @@
 import { memo, useRef, useCallback, useMemo, useState } from 'react'
-import { View, StyleSheet, TouchableOpacity, ScrollView, Modal } from 'react-native'
+import { View, StyleSheet, TouchableOpacity, Modal } from 'react-native'
 import { Icon } from '@/components/common/Icon'
 import { pop, navigations } from '@/navigation'
 import { useTheme } from '@/store/theme/hook'
@@ -14,8 +14,11 @@ import Btn from './Btn'
 import TimeoutExitBtn from './TimeoutExitBtn'
 import Marquee from './Marquee'
 import StatusBar from '@/components/common/StatusBar'
-import { useSettingValue } from '@/store/setting/hook' // ⭐ 新增导入
-import settingState from '@/store/setting/state' // ⭐ 新增导入
+import { useSettingValue } from '@/store/setting/hook'
+import settingState from '@/store/setting/state'
+import { getPosition } from '@/plugins/player'
+import { getMusicUrl } from '@/core/music'
+import { playMusic } from '@/plugins/player/playList'
 
 export const HEADER_HEIGHT = scaleSizeH(_HEADER_HEIGHT)
 
@@ -135,13 +138,30 @@ const QualitySelectModal = ({ visible, onClose }: { visible: boolean; onClose: (
   const playMusicInfo = usePlayMusicInfo()
   const currentQuality = useSettingValue('player.playQuality') || '128k'
 
-  // 这里先展示固定的音质列表，后续可以像下载弹窗一样接入自定义源的音质列表
+  // 这里先展示固定的音质列表，后续可以接入自定义源的音质列表
   const qualityList = ['128k', '320k', 'flac', 'hires', 'atmos', 'master']
 
-  const handleSelect = (quality: string) => {
-    // ⭐ TODO: 这里先设置全局音质偏好。等找到播放器的重载方法后，需要在这里调用重载
+  const handleSelect = async (quality: string) => {
     settingState.setting['player.playQuality'] = quality as LX.Quality
     onClose()
+
+    const currentMusicInfo = playMusicInfo.musicInfo
+    if (!currentMusicInfo) return
+
+    try {
+      const currentTime = await getPosition()
+      const newUrl = await getMusicUrl({
+        musicInfo: currentMusicInfo as LX.Music.MusicInfo,
+        quality: quality as LX.Quality,
+        isRefresh: true,
+      })
+
+      if (!newUrl) throw new Error('获取新音质链接失败')
+
+      playMusic(currentMusicInfo as any, newUrl, currentTime)
+    } catch (e) {
+      console.error('切换音质失败:', e)
+    }
   }
 
   if (!visible) return null
@@ -178,7 +198,7 @@ const QualitySelectModal = ({ visible, onClose }: { visible: boolean; onClose: (
 export default memo(() => {
   const popupRef = useRef<SettingPopupType>(null)
   const statusBarHeight = useStatusbarHeight()
-  const [showQualityModal, setShowQualityModal] = useState(false) // ⭐ 新增
+  const [showQualityModal, setShowQualityModal] = useState(false)
 
   const back = () => {
     void pop(commonState.componentIds[commonState.componentIds.length - 1]?.id!)
@@ -196,12 +216,12 @@ export default memo(() => {
       <View style={styles.container}>
         <Btn icon="chevron-left" onPress={back} />
         <Title />
-        <QualityBadge onPress={() => setShowQualityModal(true)} /> {/* ⭐ 插入 */}
+        <QualityBadge onPress={() => setShowQualityModal(true)} />
         <TimeoutExitBtn />
         <Btn icon="slider" onPress={showSetting} />
       </View>
       <SettingPopup ref={popupRef} direction="vertical" />
-      <QualitySelectModal visible={showQualityModal} onClose={() => setShowQualityModal(false)} /> {/* ⭐ 插入 */}
+      <QualitySelectModal visible={showQualityModal} onClose={() => setShowQualityModal(false)} />
     </View>
   )
 })
@@ -210,20 +230,14 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     height: '100%',
-    alignItems: 'center', // 确保垂直居中
+    alignItems: 'center',
   },
   titleContent: {
     flex: 1,
     paddingHorizontal: 5,
     justifyContent: 'center',
   },
-  title: {
-    // flex: 1,
-  },
-  icon: {
-    paddingLeft: 4,
-    paddingRight: 4,
-  },
+  title: {},
   singerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -231,7 +245,6 @@ const styles = StyleSheet.create({
   singerText: {
     paddingRight: 2,
   },
-  // ⭐ 新增样式
   qualityBadge: {
     paddingHorizontal: 6,
     paddingVertical: 2,
