@@ -1,4 +1,4 @@
-import { memo, useRef, useCallback, useMemo, useState, useEffect } from 'react'
+import { memo, useRef, useCallback, useMemo, useState } from 'react'
 import { View, StyleSheet, TouchableOpacity, Modal, TouchableWithoutFeedback } from 'react-native'
 import { pop, navigations } from '@/navigation'
 import { useTheme } from '@/store/theme/hook'
@@ -14,13 +14,13 @@ import TimeoutExitBtn from './TimeoutExitBtn'
 import Marquee from './Marquee'
 import StatusBar from '@/components/common/StatusBar'
 import { useSettingValue } from '@/store/setting/hook'
-import settingState from '@/store/setting/state'
 import { getPosition } from '@/plugins/player'
 import { getMusicUrl } from '@/core/music'
 import { playMusic } from '@/plugins/player/playList'
 
 export const HEADER_HEIGHT = scaleSizeH(_HEADER_HEIGHT)
 
+// ⭐ 音质名称映射
 const QUALITY_NAME_MAP: Record<string, string> = {
   '128k': '128K',
   '192k': '192K',
@@ -106,14 +106,19 @@ const Title = () => {
   )
 }
 
-// ⭐ 右上角显示平台+音质
+// ⭐ 右上角显示平台+音质（已修复 Hooks 顺序崩溃 Bug）
 const QualityBadge = ({ onPress, actualQuality }: { onPress: () => void, actualQuality: string | null }) => {
   const theme = useTheme()
   const playMusicInfo = usePlayMusicInfo()
-  const musicInfo = playMusicInfo.musicInfo ? ('progress' in playMusicInfo.musicInfo ? playMusicInfo.musicInfo.metadata.musicInfo : playMusicInfo.musicInfo) : null
-  const currentQuality = actualQuality || useSettingValue('player.playQuality') || '128k'
+  
+  // ⭐ 修复：必须无条件地调用 hook，绝对不能让 useSettingValue 被短路跳过！
+  const settingQuality = useSettingValue('player.playQuality') || '128k'
+  const currentQuality = actualQuality || settingQuality
 
-  // ⭐ 安全保护：拿不到数据就静默隐藏，不渲染，防止崩溃
+  // 获取当前歌曲信息
+  const musicInfo = playMusicInfo.musicInfo ? ('progress' in playMusicInfo.musicInfo ? playMusicInfo.musicInfo.metadata.musicInfo : playMusicInfo.musicInfo) : null
+
+  // ⭐ 安全保护：拿不到数据就静默隐藏，但 hooks 必须已经全部执行完毕
   if (!musicInfo || !musicInfo.source) return null
 
   const platformName = (musicInfo.source || '').toUpperCase()
@@ -131,6 +136,7 @@ const QualityBadge = ({ onPress, actualQuality }: { onPress: () => void, actualQ
   )
 }
 
+// ⭐ 音质切换弹窗
 const QualitySelectModal = ({ visible, onClose, onQualityChange }: { visible: boolean; onClose: () => void; onQualityChange: (q: string) => void }) => {
   const theme = useTheme()
   const playMusicInfo = usePlayMusicInfo()
@@ -218,7 +224,7 @@ const QualitySelectModal = ({ visible, onClose, onQualityChange }: { visible: bo
 
       console.log('[QualitySwitch] 准备切换至:', actualQ, '链接:', newUrl)
 
-      // ⭐ 保护：使用 setTimeout 避免与 UI 关闭动画冲突导致渲染崩溃
+      // ⭐ 使用 setTimeout 避免与 UI 关闭动画冲突
       setTimeout(() => {
         playMusic(musicInfo as any, newUrl, currentTime || 0)
         onQualityChange(actualQ)
@@ -272,6 +278,7 @@ export default memo(() => {
   const statusBarHeight = useStatusbarHeight()
   const [showQualityModal, setShowQualityModal] = useState(false)
   
+  // ⭐ 记录实际播放的音质
   const [actualQuality, setActualQuality] = useState<string | null>(null)
   
   const back = () => {
