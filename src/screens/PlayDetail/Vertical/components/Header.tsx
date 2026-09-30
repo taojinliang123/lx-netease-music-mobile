@@ -1,4 +1,4 @@
-import { memo, useRef, useCallback, useMemo, useState } from 'react'
+import { memo, useRef, useCallback, useMemo, useState, useEffect } from 'react'
 import { View, StyleSheet, TouchableOpacity, Modal, TouchableWithoutFeedback } from 'react-native'
 import { pop, navigations } from '@/navigation'
 import { useTheme } from '@/store/theme/hook'
@@ -107,12 +107,14 @@ const Title = () => {
   )
 }
 
-// ⭐ 右上角显示平台+音质的按钮
-const QualityBadge = ({ onPress }: { onPress: () => void }) => {
+// ⭐ 右上角显示平台+音质（接收 actualQuality 属性）
+const QualityBadge = ({ onPress, actualQuality }: { onPress: () => void, actualQuality: string | null }) => {
   const theme = useTheme()
   const playMusicInfo = usePlayMusicInfo()
   const musicInfo = playMusicInfo.musicInfo ? ('progress' in playMusicInfo.musicInfo ? playMusicInfo.musicInfo.metadata.musicInfo : playMusicInfo.musicInfo) : null
-  const currentQuality = useSettingValue('player.playQuality') || '128k'
+  
+  // ⭐ 优先使用 actualQuality，没有则回退到全局设置
+  const currentQuality = actualQuality || useSettingValue('player.playQuality') || '128k'
 
   if (!musicInfo) return null
 
@@ -131,23 +133,18 @@ const QualityBadge = ({ onPress }: { onPress: () => void }) => {
   )
 }
 
-// ⭐ 音质切换弹窗
-const QualitySelectModal = ({ visible, onClose }: { visible: boolean; onClose: () => void }) => {
+// ⭐ 音质切换弹窗（加入 onQualityChange 回调）
+const QualitySelectModal = ({ visible, onClose, onQualityChange }: { visible: boolean; onClose: () => void; onQualityChange: (q: string) => void }) => {
   const theme = useTheme()
   const playMusicInfo = usePlayMusicInfo()
   const currentQuality = useSettingValue('player.playQuality') || '128k'
   
-  // 获取当前歌曲信息
   const musicInfo = playMusicInfo.musicInfo ? ('progress' in playMusicInfo.musicInfo ? playMusicInfo.musicInfo.metadata.musicInfo : playMusicInfo.musicInfo) : null
 
-  // ⭐ 动态计算音质列表和大小
   const displayQualityList = useMemo(() => {
     if (!musicInfo) return []
-    
-    // 默认使用内置音质
     let rawQualities: any[] = musicInfo.meta?.qualitys || []
     
-    // ⭐ 优先读取自定义源挂载的全局音质列表
     if ((global as any).lx?.qualityList && (global as any).lx.qualityList[musicInfo.source]) {
       const customQualitys = (global as any).lx.qualityList[musicInfo.source]
       if (Array.isArray(customQualitys) && typeof customQualitys[0] === 'string') {
@@ -161,7 +158,6 @@ const QualitySelectModal = ({ visible, onClose }: { visible: boolean; onClose: (
     for (const element of rawQualities) {
       if (!element || !element.type) continue
       
-      // ⭐ 估算文件大小
       let displaySize = element.size
       if (!displaySize && musicInfo.interval) {
         const parts = musicInfo.interval.split(':')
@@ -202,15 +198,22 @@ const QualitySelectModal = ({ visible, onClose }: { visible: boolean; onClose: (
 
     try {
       const currentTime = await getPosition()
-      const newUrl = await getMusicUrl({
+      // ⭐ 注意：getMusicUrl 返回的可能是字符串，也可能是 { url, quality } 对象
+      const result = await getMusicUrl({
         musicInfo: musicInfo as LX.Music.MusicInfo,
         quality: quality as LX.Quality,
         isRefresh: true,
       })
 
+      const newUrl = typeof result === 'string' ? result : result.url
+      const actualQ = typeof result === 'string' ? quality : (result.quality || result.type || quality)
+
       if (!newUrl) throw new Error('获取新音质链接失败')
 
       playMusic(musicInfo as any, newUrl, currentTime)
+      
+      // ⭐ 通知父组件，实际播放的音质是什么
+      onQualityChange(actualQ)
     } catch (e) {
       console.error('切换音质失败:', e)
     }
@@ -257,6 +260,18 @@ export default memo(() => {
   const popupRef = useRef<SettingPopupType>(null)
   const statusBarHeight = useStatusbarHeight()
   const [showQualityModal, setShowQualityModal] = useState(false)
+  
+  // ⭐ 记录实际播放的音质
+  const [actualQuality, setActualQuality] = useState<string | null>(null)
+  
+  // ⭐ 获取当前歌曲信息（用于判断是否切歌/换源）
+  const playMusicInfo = usePlayMusicInfo()
+  const musicInfo = playMusicInfo.musicInfo ? ('progress' in playMusicInfo.musicInfo ? playMusicInfo.musicInfo.metadata.musicInfo : playMusicInfo.musicInfo) : null
+
+  // ⭐ 监听歌曲或音源变化，重置实际音质状态
+  useEffect(() => {
+    setActualQuality(null)
+  }, [musicInfo?.id, musicInfo?.source])
 
   const back = () => {
     void pop(commonState.componentIds[commonState.componentIds.length - 1]?.id!)
@@ -274,12 +289,18 @@ export default memo(() => {
       <View style={styles.container}>
         <Btn icon="chevron-left" onPress={back} />
         <Title />
-        <QualityBadge onPress={() => setShowQualityModal(true)} />
+        {/* ⭐ 传入 actualQuality */}
+        <QualityBadge onPress={() => setShowQualityModal(true)} actualQuality={actualQuality} />
         <TimeoutExitBtn />
         <Btn icon="slider" onPress={showSetting} />
       </View>
       <SettingPopup ref={popupRef} direction="vertical" />
-      <QualitySelectModal visible={showQualityModal} onClose={() => setShowQualityModal(false)} />
+      {/* ⭐ 传入 onQualityChange 回调 */}
+      <QualitySelectModal 
+        visible={showQualityModal} 
+        onClose={() => setShowQualityModal(false)} 
+        onQualityChange={(q) => setActualQuality(q)} 
+      />
     </View>
   )
 })
