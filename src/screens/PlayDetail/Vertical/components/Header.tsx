@@ -21,7 +21,6 @@ import { playMusic } from '@/plugins/player/playList'
 
 export const HEADER_HEIGHT = scaleSizeH(_HEADER_HEIGHT)
 
-// ⭐ 音质名称映射
 const QUALITY_NAME_MAP: Record<string, string> = {
   '128k': '128K',
   '192k': '192K',
@@ -107,13 +106,10 @@ const Title = () => {
   )
 }
 
-// ⭐ 右上角显示平台+音质（接收 actualQuality 属性）
 const QualityBadge = ({ onPress, actualQuality }: { onPress: () => void, actualQuality: string | null }) => {
   const theme = useTheme()
   const playMusicInfo = usePlayMusicInfo()
   const musicInfo = playMusicInfo.musicInfo ? ('progress' in playMusicInfo.musicInfo ? playMusicInfo.musicInfo.metadata.musicInfo : playMusicInfo.musicInfo) : null
-  
-  // ⭐ 优先使用 actualQuality，没有则回退到全局设置
   const currentQuality = actualQuality || useSettingValue('player.playQuality') || '128k'
 
   if (!musicInfo) return null
@@ -133,7 +129,6 @@ const QualityBadge = ({ onPress, actualQuality }: { onPress: () => void, actualQ
   )
 }
 
-// ⭐ 音质切换弹窗（加入 onQualityChange 回调）
 const QualitySelectModal = ({ visible, onClose, onQualityChange }: { visible: boolean; onClose: () => void; onQualityChange: (q: string) => void }) => {
   const theme = useTheme()
   const playMusicInfo = usePlayMusicInfo()
@@ -191,31 +186,50 @@ const QualitySelectModal = ({ visible, onClose, onQualityChange }: { visible: bo
   }, [musicInfo])
 
   const handleSelect = async (quality: string) => {
-    settingState.setting['player.playQuality'] = quality as LX.Quality
+    // ⭐ 注释掉全局偏好设置的修改，防止状态冲突导致 UI 崩溃
+    // settingState.setting['player.playQuality'] = quality as LX.Quality
     onClose()
 
     if (!musicInfo) return
 
     try {
+      // 1. 获取当前位置
       const currentTime = await getPosition()
-      // ⭐ 注意：getMusicUrl 返回的可能是字符串，也可能是 { url, quality } 对象
+      console.log('[QualitySwitch] 当前播放位置:', currentTime)
+
+      // 2. 获取新链接
       const result = await getMusicUrl({
         musicInfo: musicInfo as LX.Music.MusicInfo,
         quality: quality as LX.Quality,
         isRefresh: true,
       })
+      console.log('[QualitySwitch] getMusicUrl 返回:', result)
 
-      const newUrl = typeof result === 'string' ? result : result.url
-      const actualQ = typeof result === 'string' ? quality : (result.quality || result.type || quality)
-
-      if (!newUrl) throw new Error('获取新音质链接失败')
-
-      playMusic(musicInfo as any, newUrl, currentTime)
+      // 3. 解析返回值
+      let newUrl = ''
+      let actualQ = quality
       
-      // ⭐ 通知父组件，实际播放的音质是什么
+      if (typeof result === 'string') {
+        newUrl = result
+      } else if (result && typeof result === 'object') {
+        newUrl = result.url || ''
+        actualQ = result.quality || result.type || quality
+      }
+
+      if (!newUrl) throw new Error('获取到的 URL 为空')
+
+      console.log('[QualitySwitch] 准备切换至:', actualQ, '链接:', newUrl)
+
+      // 4. 调用播放器重新加载
+      playMusic(musicInfo as any, newUrl, currentTime || 0)
+      
+      // 5. 通知父组件更新 UI
       onQualityChange(actualQ)
-    } catch (e) {
-      console.error('切换音质失败:', e)
+      console.log('[QualitySwitch] 切换指令发送成功')
+      
+    } catch (e: any) {
+      console.error('[QualitySwitch] 切换音质失败:', e)
+      // toast(`切换失败: ${e.message}`) // 如果需要可以加个提示
     }
   }
 
@@ -261,17 +275,15 @@ export default memo(() => {
   const statusBarHeight = useStatusbarHeight()
   const [showQualityModal, setShowQualityModal] = useState(false)
   
-  // ⭐ 记录实际播放的音质
   const [actualQuality, setActualQuality] = useState<string | null>(null)
   
-  // ⭐ 获取当前歌曲信息（用于判断是否切歌/换源）
   const playMusicInfo = usePlayMusicInfo()
   const musicInfo = playMusicInfo.musicInfo ? ('progress' in playMusicInfo.musicInfo ? playMusicInfo.musicInfo.metadata.musicInfo : playMusicInfo.musicInfo) : null
 
-  // ⭐ 监听歌曲或音源变化，重置实际音质状态
-  useEffect(() => {
-    setActualQuality(null)
-  }, [musicInfo?.id, musicInfo?.source])
+  // ⭐ 修复白屏：暂时注释掉这个重置逻辑，防止播放器切歌时触发状态重渲染导致崩溃
+  // useEffect(() => {
+  //   setActualQuality(null)
+  // }, [musicInfo?.id, musicInfo?.source])
 
   const back = () => {
     void pop(commonState.componentIds[commonState.componentIds.length - 1]?.id!)
@@ -289,13 +301,11 @@ export default memo(() => {
       <View style={styles.container}>
         <Btn icon="chevron-left" onPress={back} />
         <Title />
-        {/* ⭐ 传入 actualQuality */}
         <QualityBadge onPress={() => setShowQualityModal(true)} actualQuality={actualQuality} />
         <TimeoutExitBtn />
         <Btn icon="slider" onPress={showSetting} />
       </View>
       <SettingPopup ref={popupRef} direction="vertical" />
-      {/* ⭐ 传入 onQualityChange 回调 */}
       <QualitySelectModal 
         visible={showQualityModal} 
         onClose={() => setShowQualityModal(false)} 
