@@ -1,6 +1,5 @@
 import { memo, useRef, useCallback, useMemo, useState } from 'react'
 import { View, StyleSheet, TouchableOpacity, Modal, TouchableWithoutFeedback } from 'react-native'
-import { Icon } from '@/components/common/Icon'
 import { pop, navigations } from '@/navigation'
 import { useTheme } from '@/store/theme/hook'
 import { usePlayMusicInfo } from '@/store/player/hook'
@@ -108,7 +107,7 @@ const Title = () => {
   )
 }
 
-// ⭐ 新增：右上角显示平台+音质的按钮
+// ⭐ 右上角显示平台+音质的按钮
 const QualityBadge = ({ onPress }: { onPress: () => void }) => {
   const theme = useTheme()
   const playMusicInfo = usePlayMusicInfo()
@@ -132,33 +131,86 @@ const QualityBadge = ({ onPress }: { onPress: () => void }) => {
   )
 }
 
-// ⭐ 新增：音质切换弹窗
+// ⭐ 音质切换弹窗
 const QualitySelectModal = ({ visible, onClose }: { visible: boolean; onClose: () => void }) => {
   const theme = useTheme()
   const playMusicInfo = usePlayMusicInfo()
   const currentQuality = useSettingValue('player.playQuality') || '128k'
+  
+  // 获取当前歌曲信息
+  const musicInfo = playMusicInfo.musicInfo ? ('progress' in playMusicInfo.musicInfo ? playMusicInfo.musicInfo.metadata.musicInfo : playMusicInfo.musicInfo) : null
 
-  // 这里先展示固定的音质列表，后续可以接入自定义源的音质列表
-  const qualityList = ['128k', '320k', 'flac', 'hires', 'atmos', 'master']
+  // ⭐ 动态计算音质列表和大小
+  const displayQualityList = useMemo(() => {
+    if (!musicInfo) return []
+    
+    // 默认使用内置音质
+    let rawQualities: any[] = musicInfo.meta?.qualitys || []
+    
+    // ⭐ 优先读取自定义源挂载的全局音质列表
+    if ((global as any).lx?.qualityList && (global as any).lx.qualityList[musicInfo.source]) {
+      const customQualitys = (global as any).lx.qualityList[musicInfo.source]
+      if (Array.isArray(customQualitys) && typeof customQualitys[0] === 'string') {
+        rawQualities = customQualitys.map(q => ({ type: q, size: null }))
+      } else if (Array.isArray(customQualitys)) {
+        rawQualities = customQualitys
+      }
+    }
+
+    const qualityMap: Record<string, any> = {}
+    for (const element of rawQualities) {
+      if (!element || !element.type) continue
+      
+      // ⭐ 估算文件大小
+      let displaySize = element.size
+      if (!displaySize && musicInfo.interval) {
+        const parts = musicInfo.interval.split(':')
+        if (parts.length === 2) {
+          const totalSeconds = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10)
+          let kbps = 128
+          if (element.type === '320k') kbps = 320
+          else if (element.type === 'flac') kbps = 800
+          else if (element.type === 'hires') kbps = 1500
+          else if (element.type === 'master') kbps = 2000
+
+          if (totalSeconds > 0) {
+            displaySize = `${(totalSeconds * kbps / 8 / 1024).toFixed(2)}MB`
+          }
+        }
+      }
+
+      qualityMap[element.type] = {
+        id: element.type,
+        name: QUALITY_NAME_MAP[element.type] || element.type.toUpperCase(),
+        size: displaySize
+      }
+    }
+
+    const order = ['128k', '192k', '320k', 'flac', 'hires', 'atmos', 'atmos_plus', 'master', 'master_plus']
+    return Object.values(qualityMap).sort((a: any, b: any) => {
+      const indexA = order.indexOf(a.id)
+      const indexB = order.indexOf(b.id)
+      return (indexA === -1 ? 99 : indexA) - (indexB === -1 ? 99 : indexB)
+    })
+  }, [musicInfo])
 
   const handleSelect = async (quality: string) => {
     settingState.setting['player.playQuality'] = quality as LX.Quality
     onClose()
 
-    const currentMusicInfo = playMusicInfo.musicInfo
-    if (!currentMusicInfo) return
+    if (!musicInfo) return
 
     try {
       const currentTime = await getPosition()
       const newUrl = await getMusicUrl({
-        musicInfo: currentMusicInfo as LX.Music.MusicInfo,
+        musicInfo: musicInfo as LX.Music.MusicInfo,
         quality: quality as LX.Quality,
         isRefresh: true,
       })
 
       if (!newUrl) throw new Error('获取新音质链接失败')
 
-      playMusic(currentMusicInfo as any, newUrl, currentTime)
+      playMusic(musicInfo as any, newUrl, currentTime)
     } catch (e) {
       console.error('切换音质失败:', e)
     }
@@ -173,20 +225,26 @@ const QualitySelectModal = ({ visible, onClose }: { visible: boolean; onClose: (
           <TouchableWithoutFeedback onPress={() => {}}>
             <View style={[styles.modalContent, { backgroundColor: theme['c-content-bg'] || theme['c-bg'] || '#FFFFFF' }]}>
               <Text size={16} color={theme['c-font']} style={{ marginBottom: 15, fontWeight: 'bold' }}>切换播放音质</Text>
-              {qualityList.map((q) => (
-                <TouchableOpacity
-                  key={q}
-                  style={[
-                    styles.modalItem,
-                    { backgroundColor: currentQuality === q ? (theme['c-primary-light-200-alpha-800'] || '#F0F9F4') : 'transparent' }
-                  ]}
-                  onPress={() => handleSelect(q)}
-                >
-                  <Text style={{ color: currentQuality === q ? theme['c-primary'] : theme['c-font'] }}>
-                    {QUALITY_NAME_MAP[q] || q.toUpperCase()}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {displayQualityList.length > 0 ? (
+                displayQualityList.map((item: any) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[
+                      styles.modalItem,
+                      { backgroundColor: currentQuality === item.id ? (theme['c-primary-light-200-alpha-800'] || '#F0F9F4') : 'transparent' }
+                    ]}
+                    onPress={() => handleSelect(item.id)}
+                  >
+                    <Text style={{ color: currentQuality === item.id ? theme['c-primary'] : theme['c-font'] }}>
+                      {item.name} {item.size ? `- ${item.size}` : ''}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <Text style={{ color: theme['c-font-label'], textAlign: 'center', paddingVertical: 20 }}>
+                  该音源暂无可下载的音质
+                </Text>
+              )}
             </View>
           </TouchableWithoutFeedback>
         </View>
