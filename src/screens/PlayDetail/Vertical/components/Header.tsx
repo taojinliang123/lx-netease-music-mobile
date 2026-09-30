@@ -1,5 +1,5 @@
 import { memo, useRef, useCallback, useMemo, useState } from 'react'
-import { View, StyleSheet, TouchableOpacity, Modal } from 'react-native'
+import { View, StyleSheet, TouchableOpacity, Modal, TouchableWithoutFeedback } from 'react-native'
 import { Icon } from '@/components/common/Icon'
 import { pop, navigations } from '@/navigation'
 import { useTheme } from '@/store/theme/hook'
