@@ -1,11 +1,10 @@
-import { View, Text, Modal, TouchableOpacity, StyleSheet, TouchableWithoutFeedback } from 'react-native'
-import { useState, useImperativeHandle, forwardRef, useMemo } from 'react'
+import { View, TouchableOpacity, Modal, TouchableWithoutFeedback, StyleSheet } from 'react-native'
+import { useState, useEffect, useImperativeHandle, forwardRef } from 'react'
+import Text from '@/components/common/Text'
 import { getLastSelectQuality, saveLastSelectQuality } from '@/utils/data'
 import { addTask as addDownloadTask } from '@/core/download';
 import { fetchAndApplyDetailedQuality } from "@/utils/musicSdk/wy/musicDetail.js";
 import settingState from '@/store/setting/state'
-import { useSettingValue } from '@/store/setting/hook'
-import { useTheme } from '@/store/theme/hook'
 
 export interface MusicDownloadModalType {
   show: (info: LX.Music.MusicInfo) => void
@@ -27,14 +26,6 @@ export default forwardRef<MusicDownloadModalType, MusicDownloadModalProps>(
     const [visible, setVisible] = useState(false)
     const [musicInfo, setMusicInfo] = useState<LX.Music.MusicInfo | null>(null)
     const [playQualityList, setPlayQualityList] = useState<MusicOption[]>([])
-    const [selectedTarget, setSelectedTarget] = useState<'local' | 'onedrive'>('local')
-    const showOneDriveDownload = useSettingValue('menu.downloadOneDrive')
-
-    // ⭐ 获取主题对象
-    const theme = useTheme()
-    
-    // ⭐ 动态生成样式
-    const styles = useMemo(() => createStyles(theme), [theme])
 
     const QUALITY_ORDER = ['128k', '192k', '320k', 'flac', 'hires', 'atmos', 'atmos_plus', 'master', 'master_plus'];
 
@@ -74,10 +65,14 @@ export default forwardRef<MusicDownloadModalType, MusicDownloadModalProps>(
           if (parts.length === 2) {
             const totalSeconds = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
             let kbps = 128;
+            
+            // ⭐ 修复：细化码率映射，加入臻品系列
             if (element.type === '320k') kbps = 320;
             else if (element.type === 'flac') kbps = 800;
             else if (element.type === 'hires') kbps = 1500;
-            else if (element.type === 'master') kbps = 2000;
+            else if (element.type === 'master' || element.type === 'jymaster' || element.type === 'master_plus') kbps = 2000;
+            // 处理臻品音质 (网易云可能叫 jyeffect / sky / dolby / 臻品音质)
+            else if (['jyeffect', 'sky', 'dolby', 'atmos', 'atmos_plus', '臻品音质'].includes(element.type)) kbps = 1500;
 
             if (totalSeconds > 0) {
               displaySize = `${(totalSeconds * kbps / 8 / 1024).toFixed(2)}MB`;
@@ -98,6 +93,7 @@ export default forwardRef<MusicDownloadModalType, MusicDownloadModalProps>(
         const indexB = QUALITY_ORDER.indexOf(b.id);
         return (indexA === -1 ? 99 : indexA) - (indexB === -1 ? 99 : indexB);
       });
+
       setPlayQualityList(sortedList)
     }
 
@@ -107,7 +103,6 @@ export default forwardRef<MusicDownloadModalType, MusicDownloadModalProps>(
         calcQualitys(info)
         setVisible(true)
 
-        // ⭐ 判断是否使用自定义源
         const isCustomSource = /^user_api/.test(settingState.setting['common.apiSource']);
         if (info.source === 'wy' && !info.meta?._full && !isCustomSource) {
           try {
@@ -126,9 +121,9 @@ export default forwardRef<MusicDownloadModalType, MusicDownloadModalProps>(
     const handleDownloadMusic = (qualityId: LX.Quality) => {
       void saveLastSelectQuality(qualityId)
       setVisible(false)
+      
       if (musicInfo) {
-        const target = showOneDriveDownload && selectedTarget === 'onedrive' ? 'onedrive' : 'local'
-        addDownloadTask(musicInfo, qualityId, false, target);
+        addDownloadTask(musicInfo, qualityId);
         onDownloadInfo?.(musicInfo)
       }
     }
@@ -138,13 +133,17 @@ export default forwardRef<MusicDownloadModalType, MusicDownloadModalProps>(
     if (!visible || !musicInfo) return null
 
     return (
-      <Modal transparent={true} visible={visible} animationType="fade" onRequestClose={closeModal}>
+      <Modal
+        transparent={true}
+        visible={visible}
+        animationType="fade"
+        onRequestClose={closeModal}
+      >
         <TouchableWithoutFeedback onPress={closeModal}>
           <View style={styles.overlay}>
             <TouchableWithoutFeedback onPress={() => {}}>
               <View style={styles.modalContainer}>
                 
-                {/* 头部 */}
                 <View style={styles.header}>
                   <View style={styles.headerLeft} />
                   <View style={styles.headerTitleBox}>
@@ -156,19 +155,6 @@ export default forwardRef<MusicDownloadModalType, MusicDownloadModalProps>(
                   </TouchableOpacity>
                 </View>
 
-                {/* 下载位置选择（如果开启了 OneDrive） */}
-                {showOneDriveDownload && (
-                  <View style={styles.targetRow}>
-                     <TouchableOpacity style={styles.targetBtn} onPress={() => setSelectedTarget('local')}>
-                        <Text style={selectedTarget === 'local' ? styles.targetTextActive : styles.targetText}>下载到本地</Text>
-                     </TouchableOpacity>
-                     <TouchableOpacity style={styles.targetBtn} onPress={() => setSelectedTarget('onedrive')}>
-                        <Text style={selectedTarget === 'onedrive' ? styles.targetTextActive : styles.targetText}>下载到 OneDrive</Text>
-                     </TouchableOpacity>
-                  </View>
-                )}
-
-                {/* 音质按钮列表 */}
                 <View style={styles.listContainer}>
                   {playQualityList.length > 0 ? (
                     playQualityList.map((item) => (
@@ -199,69 +185,19 @@ export default forwardRef<MusicDownloadModalType, MusicDownloadModalProps>(
   }
 )
 
-// ⭐ 根据主题动态生成样式（基于实际主题变量 c-xxx）
-const createStyles = (theme: any) => StyleSheet.create({
-  overlay: { 
-    flex: 1, 
-    backgroundColor: 'rgba(0, 0, 0, 0.5)', 
-    justifyContent: 'center', 
-    alignItems: 'center' 
-  },
-  modalContainer: { 
-    width: '85%', 
-    // 背景色：读取主题的内容背景色，防止有些主题没有此字段，提供白色作为兜底
-    backgroundColor: theme['c-content-bg'] || theme['c-bg'] || '#FFFFFF', 
-    borderRadius: 16, 
-    paddingVertical: 20, 
-    paddingHorizontal: 15 
-  },
+const styles = StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'center', alignItems: 'center' },
+  modalContainer: { width: '85%', backgroundColor: '#FFFFFF', borderRadius: 16, paddingVertical: 20, paddingHorizontal: 15 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
   headerLeft: { width: 30 },
   headerTitleBox: { flex: 1, alignItems: 'center' },
-  songName: { 
-    fontSize: 18, 
-    fontWeight: 'bold', 
-    color: theme['c-font'] || '#333333', 
-    marginBottom: 4 
-  },
-  artistName: { 
-    fontSize: 13, 
-    color: theme['c-font-label'] || theme['c-font'] || '#888888' 
-  },
+  songName: { fontSize: 18, fontWeight: 'bold', color: '#333333', marginBottom: 4 },
+  artistName: { fontSize: 13, color: '#888888' },
   headerRight: { width: 30, alignItems: 'flex-end' },
-  closeIcon: { 
-    fontSize: 20, 
-    color: theme['c-font-label'] || '#999999', 
-    fontWeight: '300' 
-  },
-  targetRow: { flexDirection: 'row', justifyContent: 'center', marginBottom: 15 },
-  targetBtn: { paddingHorizontal: 12, paddingVertical: 6, marginHorizontal: 5 },
-  targetText: { 
-    color: theme['c-font-label'] || '#999999', 
-    fontSize: 13 
-  },
-  targetTextActive: { 
-    color: theme['c-primary'] || '#3CB371', 
-    fontSize: 13, 
-    fontWeight: 'bold' 
-  },
+  closeIcon: { fontSize: 20, color: '#999999', fontWeight: '300' },
   listContainer: { width: '100%' },
-  qualityButton: { 
-    // 按钮背景色：尝试多个主题变量名，确保有颜色
-    backgroundColor: theme['c-primary-light-200-alpha-800'] || theme['c-primary-light'] || theme['c-button-bg'] || '#F0F9F4', 
-    borderRadius: 8, 
-    paddingVertical: 14, 
-    alignItems: 'center', 
-    marginBottom: 12 
-  },
-  qualityText: { 
-    color: theme['c-primary'] || '#3CB371', 
-    fontSize: 15, 
-    fontWeight: '500' 
-  },
+  qualityButton: { backgroundColor: '#F0F9F4', borderRadius: 8, paddingVertical: 14, alignItems: 'center', marginBottom: 12 },
+  qualityText: { color: '#3CB371', fontSize: 15, fontWeight: '500' },
   emptyBox: { paddingVertical: 30, alignItems: 'center' },
-  emptyText: { 
-    color: theme['c-font-label'] || '#999999', 
-    fontSize: 14 
-  }
+  emptyText: { color: '#999999', fontSize: 14 }
 });
