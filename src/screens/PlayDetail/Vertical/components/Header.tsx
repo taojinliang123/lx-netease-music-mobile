@@ -17,7 +17,7 @@ import { useSettingValue } from '@/store/setting/hook'
 import { getPosition } from '@/plugins/player'
 import { getMusicUrl } from '@/core/music'
 import { playMusic } from '@/plugins/player/playList'
-import { updateSetting } from '@/core/common' // ⭐ 新增：正规保存设置的方法
+import { updateSetting } from '@/core/common'
 
 export const HEADER_HEIGHT = scaleSizeH(_HEADER_HEIGHT)
 
@@ -109,8 +109,10 @@ const Title = () => {
 const QualityBadge = ({ onPress, actualQuality }: { onPress: () => void, actualQuality: string | null }) => {
   const theme = useTheme()
   const playMusicInfo = usePlayMusicInfo()
+  
   const settingQuality = useSettingValue('player.playQuality') || '128k'
   const currentQuality = actualQuality || settingQuality
+
   const musicInfo = playMusicInfo.musicInfo ? ('progress' in playMusicInfo.musicInfo ? playMusicInfo.musicInfo.metadata.musicInfo : playMusicInfo.musicInfo) : null
 
   if (!musicInfo || !musicInfo.source) return null
@@ -160,10 +162,14 @@ const QualitySelectModal = ({ visible, onClose, onQualityChange }: { visible: bo
         if (parts.length === 2) {
           const totalSeconds = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10)
           let kbps = 128
-          if (element.type === '320k') kbps = 320
-          else if (element.type === 'flac') kbps = 800
-          else if (element.type === 'hires') kbps = 1500
-          else if (element.type === 'master') kbps = 2000
+          
+          // ⭐ 修复：细化码率映射，加入臻品系列
+          if (element.type === '320k') kbps = 320;
+          else if (element.type === 'flac') kbps = 800;
+          else if (element.type === 'hires') kbps = 1500;
+          else if (element.type === 'master' || element.type === 'jymaster' || element.type === 'master_plus') kbps = 2000;
+          // 处理臻品音质 (网易云可能叫 jyeffect / sky / dolby / 臻品音质)
+          else if (['jyeffect', 'sky', 'dolby', 'atmos', 'atmos_plus', '臻品音质'].includes(element.type)) kbps = 1500;
 
           if (totalSeconds > 0) {
             displaySize = `${(totalSeconds * kbps / 8 / 1024).toFixed(2)}MB`
@@ -217,7 +223,6 @@ const QualitySelectModal = ({ visible, onClose, onQualityChange }: { visible: bo
 
       console.log('[QualitySwitch] 准备切换至:', actualQ, '链接:', newUrl)
 
-      // ⭐ 修复：使用 updateSetting 正规方法来保存偏好
       updateSetting({ 'player.playQuality': actualQ as LX.Quality })
       
       setTimeout(() => {
