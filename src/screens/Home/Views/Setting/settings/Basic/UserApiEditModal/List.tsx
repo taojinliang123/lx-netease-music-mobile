@@ -7,6 +7,7 @@ import { useI18n } from '@/lang'
 import { useUserApiList, state as userApiState } from '@/store/userApi'
 import { useSettingValue } from '@/store/setting/hook'
 import { removeUserApi, setUserApiAllowShowUpdateAlert } from '@/core/userApi'
+import { getUserApiScript } from '@/utils/data' // ⭐ 新增导入
 import { BorderRadius } from '@/theme'
 import CheckBox from '@/components/common/CheckBox'
 import { Icon } from '@/components/common/Icon'
@@ -77,11 +78,9 @@ const ListItem = ({
         />
       </View>
       <View style={styles.listItemRight}>
-        {/* ⭐ 新增：分享按钮 */}
         <TouchableOpacity style={styles.btn} onPress={handleShare}>
           <Icon name="share" color={theme['c-button-font']} />
         </TouchableOpacity>
-        {/* 原有的删除按钮 */}
         <TouchableOpacity style={styles.btn} onPress={handleRemove}>
           <Icon name="close" color={theme['c-button-font']} />
         </TouchableOpacity>
@@ -124,18 +123,17 @@ export default () => {
     void setUserApiAllowShowUpdateAlert(id, enabled)
   }, [])
 
-  // ⭐ 新增：分享逻辑
+  // ⭐ 修复：调用官方函数获取脚本内容并分享
   const handleShare = useCallback(async (item: LX.UserApi.UserApiInfo) => {
-    if (!item.script) {
-      // 如果 item 里没有 script 字段，尝试从 store 里查找
-      // 这里假设 item 本身包含 script 属性，如果实际不存在需要调整
-      console.warn('No script found for', item.name)
-      return
-    }
     try {
+      const scriptContent = await getUserApiScript(item.id)
+      if (!scriptContent) {
+        console.warn('脚本内容为空:', item.name)
+        return
+      }
       await Share.share({
         title: `分享音源：${item.name}`,
-        message: item.script,
+        message: scriptContent,
       })
     } catch (e) {
       console.error('分享失败:', e)
@@ -191,7 +189,7 @@ const styles = createStyle({
   },
   listItemRight: {
     flex: 0,
-    flexDirection: 'row', // ⭐ 让分享和删除按钮并排
+    flexDirection: 'row',
   },
   btn: {
     padding: 10,
