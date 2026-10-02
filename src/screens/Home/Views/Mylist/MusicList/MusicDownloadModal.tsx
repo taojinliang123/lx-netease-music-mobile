@@ -5,7 +5,7 @@ import { getLastSelectQuality, saveLastSelectQuality } from '@/utils/data'
 import { addTask as addDownloadTask } from '@/core/download';
 import { fetchAndApplyDetailedQuality } from "@/utils/musicSdk/wy/musicDetail.js";
 import settingState from '@/store/setting/state'
-import { useTheme } from '@/store/theme/hook' // ⭐ 引入 useTheme
+import { useTheme } from '@/store/theme/hook'
 
 export interface MusicDownloadModalType {
   show: (info: LX.Music.MusicInfo) => void
@@ -27,7 +27,7 @@ export default forwardRef<MusicDownloadModalType, MusicDownloadModalProps>(
     const [visible, setVisible] = useState(false)
     const [musicInfo, setMusicInfo] = useState<LX.Music.MusicInfo | null>(null)
     const [playQualityList, setPlayQualityList] = useState<MusicOption[]>([])
-    const theme = useTheme() // ⭐ 获取当前主题
+    const theme = useTheme()
 
     const QUALITY_ORDER = ['128k', '192k', '320k', 'flac', 'hires', 'atmos', 'atmos_plus', 'master', 'master_plus'];
 
@@ -139,22 +139,22 @@ export default forwardRef<MusicDownloadModalType, MusicDownloadModalProps>(
         <TouchableWithoutFeedback onPress={closeModal}>
           <View style={styles.overlay}>
             <TouchableWithoutFeedback onPress={() => {}}>
-              {/* ⭐ 弹窗主体：背景改为主题色 */}
               <View style={[styles.modalContainer, { backgroundColor: theme['c-content-bg'] || theme['c-bg'] || '#FFFFFF' }]}>
                 
-                {/* ⭐ 头部：改为主题色横条，右侧带 X */}
-                <View style={[styles.header, { backgroundColor: theme['c-primary'] }]}>
-                  <View style={styles.headerLeft} />
-                  <View style={styles.headerTitleBox}>
-                    <Text style={[styles.songName, { color: theme['c-primary-font'] || '#FFFFFF' }]} numberOfLines={1}>{musicInfo.name}</Text>
-                    <Text style={[styles.artistName, { color: theme['c-primary-font'] || '#FFFFFF', opacity: 0.8 }]} numberOfLines={1}>{musicInfo.singer}</Text>
-                  </View>
-                  <TouchableOpacity style={styles.headerRight} onPress={closeModal}>
-                    <Text style={[styles.closeIcon, { color: theme['c-primary-font'] || '#FFFFFF' }]}>✕</Text>
+                {/* ⭐ 顶部：细长主题色横条，右侧 X（严格模仿自定义源弹窗） */}
+                <View style={[styles.topBar, { backgroundColor: theme['c-primary'] }]}>
+                  <TouchableOpacity style={styles.closeBtn} onPress={closeModal}>
+                    <Text style={styles.closeIcon}>✕</Text>
                   </TouchableOpacity>
                 </View>
 
-                {/* 音质列表区域 */}
+                {/* ⭐ 标题区域：歌名/歌手，放在白色背景上 */}
+                <View style={styles.titleArea}>
+                  <Text style={[styles.songName, { color: theme['c-font'] }]} numberOfLines={1}>{musicInfo.name}</Text>
+                  <Text style={[styles.artistName, { color: theme['c-font-label'] }]} numberOfLines={1}>{musicInfo.singer}</Text>
+                </View>
+
+                {/* 音质列表 */}
                 <View style={styles.listContainer}>
                   {playQualityList.length > 0 ? (
                     playQualityList.map((item) => (
@@ -195,23 +195,42 @@ const styles = StyleSheet.create({
   modalContainer: {
     width: '85%',
     borderRadius: 16,
-    overflow: 'hidden', // ⭐ 关键：让头部横条不超出圆角范围
+    overflow: 'hidden',
   },
-  header: {
+  // ⭐ 顶部细条
+  topBar: {
+    height: 40,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 15,
+    justifyContent: 'flex-end',
+    paddingHorizontal: 10,
   },
-  headerLeft: { width: 30 },
-  headerTitleBox: { flex: 1, alignItems: 'center' },
-  songName: { fontSize: 16, fontWeight: 'bold', marginBottom: 2 },
-  artistName: { fontSize: 12 },
-  headerRight: { width: 30, alignItems: 'flex-end' },
-  closeIcon: { fontSize: 22, fontWeight: '300' },
+  closeBtn: {
+    padding: 5,
+  },
+  closeIcon: {
+    fontSize: 20,
+    color: '#FFFFFF',
+    fontWeight: '300',
+  },
+  // ⭐ 标题区域（在白色背景上）
+  titleArea: {
+    paddingTop: 15,
+    paddingBottom: 5,
+    paddingHorizontal: 15,
+    alignItems: 'center',
+  },
+  songName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  artistName: {
+    fontSize: 13,
+  },
   listContainer: {
-    width: '100%',
     padding: 15,
+    width: '100%',
   },
   qualityButton: {
     borderRadius: 8,
@@ -219,7 +238,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  qualityText: { fontSize: 15, fontWeight: '500' },
+  qualityText: {
+    fontSize: 15,
+    fontWeight: '500',
+  },
   emptyBox: {
     paddingVertical: 30,
     alignItems: 'center',
