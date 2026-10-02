@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import Text from '@/components/common/Text'
-import { View, TouchableOpacity, ScrollView } from 'react-native'
+import { View, TouchableOpacity, ScrollView, Share } from 'react-native'
 import { confirmDialog, createStyle } from '@/utils/tools'
 import { useTheme } from '@/store/theme/hook'
 import { useI18n } from '@/lang'
@@ -17,16 +17,19 @@ import { setApiSource } from '@/core/apiSource'
 const formatVersionName = (version: string) => {
   return /^\d/.test(version) ? `v${version}` : version
 }
+
 const ListItem = ({
   item,
   activeId,
   onRemove,
   onChangeAllowShowUpdateAlert,
+  onShare,
 }: {
   item: LX.UserApi.UserApiInfo
   activeId: string
   onRemove: (id: string, name: string) => void
   onChangeAllowShowUpdateAlert: (id: string, enabled: boolean) => void
+  onShare: (item: LX.UserApi.UserApiInfo) => void
 }) => {
   const theme = useTheme()
   const t = useI18n()
@@ -35,6 +38,9 @@ const ListItem = ({
   }
   const handleRemove = () => {
     onRemove(item.id, item.name)
+  }
+  const handleShare = () => {
+    onShare(item)
   }
 
   return (
@@ -71,6 +77,11 @@ const ListItem = ({
         />
       </View>
       <View style={styles.listItemRight}>
+        {/* ⭐ 新增：分享按钮 */}
+        <TouchableOpacity style={styles.btn} onPress={handleShare}>
+          <Icon name="share" color={theme['c-button-font']} />
+        </TouchableOpacity>
+        {/* 原有的删除按钮 */}
         <TouchableOpacity style={styles.btn} onPress={handleRemove}>
           <Icon name="close" color={theme['c-button-font']} />
         </TouchableOpacity>
@@ -81,7 +92,6 @@ const ListItem = ({
 
 export interface UserApiEditModalProps {
   onSave: (rules: string) => void
-  // onSourceChange: SourceSelectorProps['onSourceChange']
 }
 export interface UserApiEditModalType {
   show: (rules: string) => void
@@ -109,8 +119,27 @@ export default () => {
       }
     })
   }, [])
+
   const handleChangeAllowShowUpdateAlert = useCallback((id: string, enabled: boolean) => {
     void setUserApiAllowShowUpdateAlert(id, enabled)
+  }, [])
+
+  // ⭐ 新增：分享逻辑
+  const handleShare = useCallback(async (item: LX.UserApi.UserApiInfo) => {
+    if (!item.script) {
+      // 如果 item 里没有 script 字段，尝试从 store 里查找
+      // 这里假设 item 本身包含 script 属性，如果实际不存在需要调整
+      console.warn('No script found for', item.name)
+      return
+    }
+    try {
+      await Share.share({
+        title: `分享音源：${item.name}`,
+        message: item.script,
+      })
+    } catch (e) {
+      console.error('分享失败:', e)
+    }
   }, [])
 
   return (
@@ -125,6 +154,7 @@ export default () => {
                 activeId={apiSource}
                 onRemove={handleRemove}
                 onChangeAllowShowUpdateAlert={handleChangeAllowShowUpdateAlert}
+                onShare={handleShare}
               />
             )
           })
@@ -161,14 +191,10 @@ const styles = createStyle({
   },
   listItemRight: {
     flex: 0,
-    // backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    flexDirection: 'row', // ⭐ 让分享和删除按钮并排
   },
-  // btns: {
-  //   padding: 5,
-  // },
   btn: {
     padding: 10,
-    // backgroundColor: 'rgba(0, 0, 0, 0.2)',
   },
   tipText: {
     textAlign: 'center',
