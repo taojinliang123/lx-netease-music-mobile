@@ -1,11 +1,13 @@
-import { View, TouchableOpacity, Modal, TouchableWithoutFeedback, StyleSheet } from 'react-native'
-import { useState, useImperativeHandle, forwardRef } from 'react'
+import { useState, useImperativeHandle, forwardRef, useRef } from 'react'
+import { View, TouchableOpacity } from 'react-native'
 import Text from '@/components/common/Text'
+import Dialog, { type DialogType } from '@/components/common/Dialog' // ⭐ 引入 Dialog
 import { getLastSelectQuality, saveLastSelectQuality } from '@/utils/data'
 import { addTask as addDownloadTask } from '@/core/download';
 import { fetchAndApplyDetailedQuality } from "@/utils/musicSdk/wy/musicDetail.js";
 import settingState from '@/store/setting/state'
 import { useTheme } from '@/store/theme/hook'
+import { createStyle } from '@/utils/tools'
 
 export interface MusicDownloadModalType {
   show: (info: LX.Music.MusicInfo) => void
@@ -27,6 +29,7 @@ export default forwardRef<MusicDownloadModalType, MusicDownloadModalProps>(
     const [visible, setVisible] = useState(false)
     const [musicInfo, setMusicInfo] = useState<LX.Music.MusicInfo | null>(null)
     const [playQualityList, setPlayQualityList] = useState<MusicOption[]>([])
+    const dialogRef = useRef<DialogType>(null)
     const theme = useTheme()
 
     const QUALITY_ORDER = ['128k', '192k', '320k', 'flac', 'hires', 'atmos', 'atmos_plus', 'master', 'master_plus'];
@@ -99,6 +102,10 @@ export default forwardRef<MusicDownloadModalType, MusicDownloadModalProps>(
         setMusicInfo(info)
         calcQualitys(info)
         setVisible(true)
+        // ⭐ 开启 Dialog
+        setTimeout(() => {
+          dialogRef.current?.setVisible(true)
+        }, 0)
 
         const isCustomSource = /^user_api/.test(settingState.setting['common.apiSource']);
         if (info.source === 'wy' && !info.meta?._full && !isCustomSource) {
@@ -117,6 +124,7 @@ export default forwardRef<MusicDownloadModalType, MusicDownloadModalProps>(
 
     const handleDownloadMusic = (qualityId: LX.Quality) => {
       void saveLastSelectQuality(qualityId)
+      dialogRef.current?.setVisible(false) // ⭐ 关闭 Dialog
       setVisible(false)
       
       if (musicInfo) {
@@ -125,120 +133,80 @@ export default forwardRef<MusicDownloadModalType, MusicDownloadModalProps>(
       }
     }
 
-    const closeModal = () => setVisible(false)
+    const handleHide = () => {
+      setVisible(false)
+    }
 
     if (!visible || !musicInfo) return null
 
     return (
-      <Modal
-        transparent={true}
-        visible={visible}
-        animationType="fade"
-        onRequestClose={closeModal}
-      >
-        <TouchableWithoutFeedback onPress={closeModal}>
-          <View style={styles.overlay}>
-            <TouchableWithoutFeedback onPress={() => {}}>
-              <View style={[styles.modalContainer, { backgroundColor: theme['c-content-bg'] || theme['c-bg'] || '#FFFFFF' }]}>
-                
-                {/* ⭐ 顶部主题色横条，右侧放一个白色的 X */}
-                <View style={[styles.header, { backgroundColor: theme['c-primary'] }]}>
-                  <TouchableOpacity style={styles.closeBtn} onPress={closeModal}>
-                    <Text style={styles.closeIcon}>✕</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* 标题区域（在白色背景上，和截图一致） */}
-                <View style={styles.titleArea}>
-                  <Text style={[styles.songName, { color: theme['c-font'] }]} numberOfLines={1}>{musicInfo.name}</Text>
-                  <Text style={[styles.artistName, { color: theme['c-font-label'] }]} numberOfLines={1}>{musicInfo.singer}</Text>
-                </View>
-
-                {/* 音质列表 */}
-                <View style={styles.listContainer}>
-                  {playQualityList.length > 0 ? (
-                    playQualityList.map((item) => (
-                      <TouchableOpacity
-                        key={item.key || item.id}
-                        style={[styles.qualityButton, { backgroundColor: theme['c-primary-light-200-alpha-800'] || theme['c-button-background'] || '#F0F9F4' }]}
-                        activeOpacity={0.7}
-                        onPress={() => handleDownloadMusic(item.id)}
-                      >
-                        <Text style={[styles.qualityText, { color: theme['c-primary'] || '#3CB371' }]}>
-                          {item.name} {item.size ? `- ${item.size}` : ''}
-                        </Text>
-                      </TouchableOpacity>
-                    ))
-                  ) : (
-                    <View style={styles.emptyBox}>
-                      <Text style={[styles.emptyText, { color: theme['c-font-label'] || '#999999' }]}>该音源暂无可下载的音质</Text>
-                    </View>
-                  )}
-                </View>
-
-              </View>
-            </TouchableWithoutFeedback>
+      <Dialog ref={dialogRef} onHide={handleHide}>
+        <View style={styles.content}>
+          {/* 标题部分：歌名和歌手居中 */}
+          <View style={styles.titleArea}>
+            <Text size={16} style={styles.songName} color={theme['c-font']} numberOfLines={1}>{musicInfo.name}</Text>
+            <Text size={12} style={styles.artistName} color={theme['c-font-label']} numberOfLines={1}>{musicInfo.singer}</Text>
           </View>
-        </TouchableWithoutFeedback>
-      </Modal>
+
+          {/* 音质列表 */}
+          <View style={styles.listContainer}>
+            {playQualityList.length > 0 ? (
+              playQualityList.map((item) => (
+                <TouchableOpacity
+                  key={item.key || item.id}
+                  style={[styles.qualityButton, { backgroundColor: theme['c-button-background'] }]}
+                  activeOpacity={0.7}
+                  onPress={() => handleDownloadMusic(item.id)}
+                >
+                  <Text style={[styles.qualityText, { color: theme['c-button-font'] }]}>
+                    {item.name} {item.size ? `- ${item.size}` : ''}
+                  </Text>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <View style={styles.emptyBox}>
+                <Text style={[styles.emptyText, { color: theme['c-font-label'] }]}>该音源暂无可下载的音质</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </Dialog>
     )
   }
 )
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContainer: {
-    width: '85%',
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  // ⭐ 顶部主题色横条（高度与自定义源弹窗一致，约 45px）
-  header: {
-    height: 45,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    paddingRight: 15,
-  },
-  closeBtn: {
-    padding: 5,
-  },
-  closeIcon: {
-    fontSize: 20,
-    color: '#FFFFFF', // ⭐ X 永远是白色的，在主题色横条上清晰可见
-    fontWeight: '300',
+const styles = createStyle({
+  content: {
+    flexShrink: 1,
+    paddingHorizontal: 15,
+    paddingTop: 10,
+    paddingBottom: 20,
+    flexDirection: 'column',
   },
   titleArea: {
-    paddingTop: 15,
-    paddingBottom: 5,
-    paddingHorizontal: 15,
     alignItems: 'center',
+    marginBottom: 15,
+    paddingTop: 5,
   },
   songName: {
-    fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 4,
+    textAlign: 'center',
   },
   artistName: {
-    fontSize: 13,
+    textAlign: 'center',
   },
   listContainer: {
-    padding: 15,
     width: '100%',
   },
   qualityButton: {
-    borderRadius: 8,
-    paddingVertical: 14,
+    borderRadius: 4,
+    paddingVertical: 12,
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   qualityText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '500',
   },
   emptyBox: {
@@ -248,4 +216,4 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 14,
   },
-});
+})
