@@ -141,14 +141,15 @@ export default forwardRef<MusicDownloadModalType, MusicDownloadModalProps>(
             <TouchableWithoutFeedback onPress={() => {}}>
               <View style={[styles.modalContainer, { backgroundColor: theme['c-content-bg'] || theme['c-bg'] || '#FFFFFF' }]}>
                 
-                {/* ⭐ 顶部：细长主题色横条，右侧 X（严格模仿自定义源弹窗） */}
-                <View style={[styles.topBar, { backgroundColor: theme['c-primary'] }]}>
-                  <TouchableOpacity style={styles.closeBtn} onPress={closeModal}>
-                    <Text style={styles.closeIcon}>✕</Text>
-                  </TouchableOpacity>
-                </View>
+                {/* ⭐ 顶部只有一条极细的主题色线（4px） */}
+                <View style={{ height: 4, backgroundColor: theme['c-primary'] }} />
 
-                {/* ⭐ 标题区域：歌名/歌手，放在白色背景上 */}
+                {/* ⭐ 关闭按钮绝对定位，浮在右上角 */}
+                <TouchableOpacity style={styles.closeBtn} onPress={closeModal}>
+                  <Text style={[styles.closeIcon, { color: theme['c-font-label'] }]}>✕</Text>
+                </TouchableOpacity>
+
+                {/* ⭐ 标题区域（在主体背景上） */}
                 <View style={styles.titleArea}>
                   <Text style={[styles.songName, { color: theme['c-font'] }]} numberOfLines={1}>{musicInfo.name}</Text>
                   <Text style={[styles.artistName, { color: theme['c-font-label'] }]} numberOfLines={1}>{musicInfo.singer}</Text>
@@ -195,28 +196,24 @@ const styles = StyleSheet.create({
   modalContainer: {
     width: '85%',
     borderRadius: 16,
-    overflow: 'hidden',
+    overflow: 'hidden', // 保证顶部的细线不会超出圆角
   },
-  // ⭐ 顶部细条
-  topBar: {
-    height: 40,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    paddingHorizontal: 10,
-  },
+  // ⭐ 关闭按钮浮动在右上角
   closeBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
     padding: 5,
+    zIndex: 10,
   },
   closeIcon: {
     fontSize: 20,
-    color: '#FFFFFF',
     fontWeight: '300',
   },
-  // ⭐ 标题区域（在白色背景上）
+  // ⭐ 标题区域
   titleArea: {
-    paddingTop: 15,
-    paddingBottom: 5,
+    paddingTop: 25, // 留出空间，避免与右上角的 X 重叠
+    paddingBottom: 15,
     paddingHorizontal: 15,
     alignItems: 'center',
   },
@@ -230,6 +227,7 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     padding: 15,
+    paddingTop: 0,
     width: '100%',
   },
   qualityButton: {
