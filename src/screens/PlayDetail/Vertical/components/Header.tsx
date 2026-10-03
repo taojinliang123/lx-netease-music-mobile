@@ -109,8 +109,6 @@ const QualityBadge = ({ onPress, actualQuality }: { onPress: () => void, actualQ
   const theme = useTheme()
   const playMusicInfo = usePlayMusicInfo()
   const settingQuality = useSettingValue('player.playQuality') || '128k'
-  
-  // ⭐ 优先显示临时音质，如果没有则显示全局设置
   const currentQuality = actualQuality || settingQuality
 
   const musicInfo = playMusicInfo.musicInfo ? ('progress' in playMusicInfo.musicInfo ? playMusicInfo.musicInfo.metadata.musicInfo : playMusicInfo.musicInfo) : null
@@ -132,10 +130,14 @@ const QualityBadge = ({ onPress, actualQuality }: { onPress: () => void, actualQ
   )
 }
 
-const QualitySelectModal = ({ visible, onClose, onQualityChange }: { visible: boolean; onClose: () => void; onQualityChange: (q: string) => void }) => {
+// ⭐ 接收实际临时音质作为高亮依据
+const QualitySelectModal = ({ visible, onClose, onQualityChange, actualQuality }: { visible: boolean; onClose: () => void; onQualityChange: (q: string) => void; actualQuality: string | null }) => {
   const theme = useTheme()
   const playMusicInfo = usePlayMusicInfo()
-  const currentQuality = useSettingValue('player.playQuality') || '128k'
+  
+  // ⭐ 优先使用临时音质，否则回退到全局设置 (注意 Hooks 必须无条件调用)
+  const settingQuality = useSettingValue('player.playQuality') || '128k'
+  const currentQuality = actualQuality || settingQuality
   
   const musicInfo = playMusicInfo.musicInfo ? ('progress' in playMusicInfo.musicInfo ? playMusicInfo.musicInfo.metadata.musicInfo : playMusicInfo.musicInfo) : null
 
@@ -291,7 +293,7 @@ export default memo(() => {
     return null
   })
 
-  // ⭐ 监听歌曲变化，如果切歌了，重置状态（全局变量会因 ID 不匹配而自动失效）
+  // ⭐ 监听歌曲变化，自动恢复或重置临时状态
   useEffect(() => {
     const temp = (global as any).lx?.playerTemporaryQuality
     if (temp && temp.id === musicInfo?.id) {
@@ -322,10 +324,12 @@ export default memo(() => {
         <Btn icon="slider" onPress={showSetting} />
       </View>
       <SettingPopup ref={popupRef} direction="vertical" />
+      {/* ⭐ 将 actualQuality 传给弹窗，修复高亮显示问题 */}
       <QualitySelectModal 
         visible={showQualityModal} 
         onClose={() => setShowQualityModal(false)} 
         onQualityChange={(q) => setActualQuality(q)} 
+        actualQuality={actualQuality}
       />
     </View>
   )
