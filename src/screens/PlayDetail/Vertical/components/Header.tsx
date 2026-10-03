@@ -1,4 +1,4 @@
-import { memo, useRef, useCallback, useMemo, useState } from 'react'
+import { memo, useRef, useCallback, useMemo, useState, useEffect } from 'react'
 import { View, StyleSheet, TouchableOpacity, Modal, TouchableWithoutFeedback } from 'react-native'
 import { pop, navigations } from '@/navigation'
 import { useTheme } from '@/store/theme/hook'
@@ -17,7 +17,7 @@ import { useSettingValue } from '@/store/setting/hook'
 import { getPosition } from '@/plugins/player'
 import { getMusicUrl } from '@/core/music'
 import { playMusic } from '@/plugins/player/playList'
-import { updateSetting } from '@/core/common'
+// ⭐ 注意：这里不再需要引入 updateSetting，因为我们不修改全局设置
 
 export const HEADER_HEIGHT = scaleSizeH(_HEADER_HEIGHT)
 
@@ -109,8 +109,8 @@ const Title = () => {
 const QualityBadge = ({ onPress, actualQuality }: { onPress: () => void, actualQuality: string | null }) => {
   const theme = useTheme()
   const playMusicInfo = usePlayMusicInfo()
-  
   const settingQuality = useSettingValue('player.playQuality') || '128k'
+  // ⭐ 优先显示当前临时音质，如果没有（刚切歌/刚启动），则回退显示全局设置
   const currentQuality = actualQuality || settingQuality
 
   const musicInfo = playMusicInfo.musicInfo ? ('progress' in playMusicInfo.musicInfo ? playMusicInfo.musicInfo.metadata.musicInfo : playMusicInfo.musicInfo) : null
@@ -162,13 +162,10 @@ const QualitySelectModal = ({ visible, onClose, onQualityChange }: { visible: bo
         if (parts.length === 2) {
           const totalSeconds = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10)
           let kbps = 128
-          
-          // ⭐ 修复：细化码率映射，加入臻品系列
           if (element.type === '320k') kbps = 320;
           else if (element.type === 'flac') kbps = 800;
-          else if (element.type === 'hires') kbps = 1500;
+          else if (element.type === 'hires') kbps = 1800;
           else if (element.type === 'master' || element.type === 'jymaster' || element.type === 'master_plus') kbps = 2000;
-          // 处理臻品音质 (网易云可能叫 jyeffect / sky / dolby / 臻品音质)
           else if (['jyeffect', 'sky', 'dolby', 'atmos', 'atmos_plus', '臻品音质'].includes(element.type)) kbps = 1500;
 
           if (totalSeconds > 0) {
@@ -223,7 +220,8 @@ const QualitySelectModal = ({ visible, onClose, onQualityChange }: { visible: bo
 
       console.log('[QualitySwitch] 准备切换至:', actualQ, '链接:', newUrl)
 
-      updateSetting({ 'player.playQuality': actualQ as LX.Quality })
+      // ⭐ 核心修改：不再调用 updateSetting，不修改全局偏好，只做本地播放切换
+      // updateSetting({ 'player.playQuality': actualQ as LX.Quality }) // 注释掉这一行
       
       setTimeout(() => {
         playMusic(musicInfo as any, newUrl, currentTime || 0)
@@ -278,8 +276,17 @@ export default memo(() => {
   const statusBarHeight = useStatusbarHeight()
   const [showQualityModal, setShowQualityModal] = useState(false)
   
+  // ⭐ 记录当前歌曲实际播放的音质（临时）
   const [actualQuality, setActualQuality] = useState<string | null>(null)
   
+  const playMusicInfo = usePlayMusicInfo()
+  const musicInfo = playMusicInfo.musicInfo ? ('progress' in playMusicInfo.musicInfo ? playMusicInfo.musicInfo.metadata.musicInfo : playMusicInfo.musicInfo) : null
+
+  // ⭐ 核心修改：监听歌曲 ID 变化，一旦切歌，就重置临时音质状态，自动回退到全局设置
+  useEffect(() => {
+    setActualQuality(null)
+  }, [musicInfo?.id])
+
   const back = () => {
     void pop(commonState.componentIds[commonState.componentIds.length - 1]?.id!)
   }
