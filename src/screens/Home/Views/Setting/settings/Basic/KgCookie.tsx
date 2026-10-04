@@ -1,17 +1,15 @@
 import { memo, useEffect } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native'; // 换成最基础的RN组件
+import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native'; // 换成最基础的原生组件
 import { useI18n } from '@/lang';
 import { useSettingValue } from '@/store/setting/hook';
 import { updateSetting } from '@/core/common';
 
 export default memo(() => {
   const t = useI18n();
-  const cookie = useSettingValue('common.kg_cookie');
+  const cookie = useSettingValue('common.kg_cookie') || '';
 
   const setCookie = (val: string) => {
     updateSetting({ 'common.kg_cookie': val });
-    // 暂时去掉复杂的原生 CookieManager 同步逻辑，先保证界面不崩
-    // 等确认界面没问题了，我们再一步步加回来
   };
 
   useEffect(() => {
