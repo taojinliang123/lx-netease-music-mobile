@@ -14,8 +14,7 @@ import IsAlwaysKeepStatusbarHeight from './IsAlwaysKeepStatusbarHeight'
 import DrawerLayoutPosition from './DrawerLayoutPosition'
 import { useI18n } from '@/lang/i18n'
 import WyCookie from './WyCookie'
-import KgCookie from './KgCookie' // 恢复酷狗
-// import NavMenu from "@/screens/Home/Views/Setting/settings/Basic/NavMenu.tsx"; // 罪魁祸首，坚决不恢复！
+// NavMenu 和 KgCookie 暂不引入，避免底层崩溃
 
 export default memo(() => {
   const t = useI18n()
@@ -28,14 +27,12 @@ export default memo(() => {
       <IsAlwaysKeepStatusbarHeight />
       <Theme />
       <DrawerLayoutPosition />
-      {/* <NavMenu /> */} 
       <Language />
       <FontSize />
       <ShareType />
       <Source />
       <SourceName />
       <WyCookie />
-      <KgCookie /> {/* 恢复酷狗 */}
     </Section>
   )
 })
