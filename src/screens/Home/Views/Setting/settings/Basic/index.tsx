@@ -46,7 +46,7 @@ export default memo(() => {
       <Source />
       <SourceName />
       <WyCookie />
-      <KgCookie /> {/* 新增 */}
+      {/* <KgCookie /> */} {/* 新增 */}
     </Section>
   )
 })
