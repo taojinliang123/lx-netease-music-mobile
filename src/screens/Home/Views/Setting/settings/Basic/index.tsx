@@ -18,8 +18,8 @@ import IsAlwaysKeepStatusbarHeight from './IsAlwaysKeepStatusbarHeight'
 import DrawerLayoutPosition from './DrawerLayoutPosition'
 import { useI18n } from '@/lang/i18n'
 import WyCookie from './WyCookie'
-// import KgCookie from './KgCookie' // 新增
-// import NavMenu from "@/screens/Home/Views/Setting/settings/Basic/NavMenu.tsx";
+import KgCookie from './KgCookie' // 新增
+import NavMenu from "@/screens/Home/Views/Setting/settings/Basic/NavMenu.tsx";
 
 export default memo(() => {
   const t = useI18n()
@@ -39,14 +39,14 @@ export default memo(() => {
       <IsAlwaysKeepStatusbarHeight />
       <Theme />
       <DrawerLayoutPosition />
-      {/* <NavMenu /> */}
+      <NavMenu />
       <Language />
       <FontSize />
       <ShareType />
       <Source />
       <SourceName />
       <WyCookie />
-      {/* <KgCookie /> */}
+      <KgCookie /> {/* 新增 */}
     </Section>
   )
 })
