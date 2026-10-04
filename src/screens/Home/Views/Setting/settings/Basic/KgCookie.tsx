@@ -76,9 +76,13 @@ export default memo(() => {
         onChanged={handleChanged}
         placeholder="在此处粘贴你的酷狗 Cookie"
       />
+      
+      {/* === 方案1：暂时注释掉按钮，用于排查崩溃原因 ===
       <View style={styles.btnContainer}>
         <Button onPress={handleShowLoginModal}>酷狗网页登录</Button>
       </View>
+      */}
+      
     </View>
   );
 });
