@@ -72,8 +72,10 @@ declare global {
     triggerSearch: (text: string) => void;
     'wy-cookie-set': (cookie: string) => void
     'yt-cookie-set': (cookie: string) => void
+    'kg-cookie-set': (cookie: string) => void // 新增酷狗 Cookie 事件
     showWebLogin: () => void
     showYouTubeLogin: () => void
+    showKugouWebLogin: () => void // 新增酷狗网页登录事件
     showVideoPlayer: (url: string) => void
   }
   var list_event: ListEventTypes
