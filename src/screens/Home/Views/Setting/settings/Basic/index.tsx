@@ -1,4 +1,5 @@
 import { memo } from 'react'
+
 import Theme from '../Theme'
 import Section from '../../components/Section'
 import Source from './Source'
@@ -13,6 +14,7 @@ import IsAlwaysKeepStatusbarHeight from './IsAlwaysKeepStatusbarHeight'
 import DrawerLayoutPosition from './DrawerLayoutPosition'
 import { useI18n } from '@/lang/i18n'
 import WyCookie from './WyCookie'
+import KgCookie from './KgCookie' // 放在顶部导入
 
 export default memo(() => {
   const t = useI18n()
@@ -31,7 +33,7 @@ export default memo(() => {
       <Source />
       <SourceName />
       <WyCookie />
-      {/* <KgCookie /> 等咱们新建好文件再放出来 */}
+      <KgCookie /> {/* 放在这里渲染 */}
     </Section>
   )
 })
