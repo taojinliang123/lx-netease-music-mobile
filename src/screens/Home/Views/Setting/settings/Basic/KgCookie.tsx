@@ -1,12 +1,12 @@
 import { memo, useEffect } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native'; 
+import { View, Text, TextInput, StyleSheet } from 'react-native'; // 去掉了 Pressable
 import { useI18n } from '@/lang';
 import { useSettingValue } from '@/store/setting/hook';
 import { updateSetting } from '@/core/common';
 
 export default memo(() => {
   const t = useI18n();
-  const cookie = useSettingValue('common.kg_cookie') || ''; // 读底层已安全的参数
+  const cookie = useSettingValue('common.kg_cookie') || '';
 
   const setCookie = (val: string) => {
     updateSetting({ 'common.kg_cookie': val });
@@ -29,17 +29,12 @@ export default memo(() => {
         style={styles.input}
         value={cookie}
         onChangeText={setCookie}
-        placeholder="在此处粘贴你的酷狗 Cookie"
+        placeholder="在此处粘贴你的酷狗音乐 Cookie"
         placeholderTextColor="#999"
       />
-      
-      {/* 把门铃按钮放出来！ */}
-      <Pressable 
-        style={styles.btn} 
-        onPress={() => global.app_event.emit('showKugouWebLogin')}
-      >
-        <Text style={styles.btnText}>酷狗网页登录</Text>
-      </Pressable>
+      <Text style={styles.tip}>
+        * 请前往酷狗 App 复制 Cookie 后粘贴到此处
+      </Text>
     </View>
   );
 });
@@ -53,15 +48,7 @@ const styles = StyleSheet.create({
     borderRadius: 5, 
     padding: 10, 
     fontSize: 14,
-    marginBottom: 12
+    marginBottom: 8
   },
-  btn: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 5,
-    alignItems: 'center',
-    alignSelf: 'flex-start'
-  },
-  btnText: { color: '#fff', fontSize: 14, fontWeight: 'bold' }
+  tip: { fontSize: 12, color: '#999' }
 });
