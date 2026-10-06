@@ -32,8 +32,7 @@ export default memo(() => {
       <ShareType />
       <Source />
       <SourceName />
-      <WyCookie />
-      <KgCookie /> {/* 放在这里渲染 */}
+      <WyCookie />      
     </Section>
   )
 })
