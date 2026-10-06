@@ -14,7 +14,7 @@ import IsAlwaysKeepStatusbarHeight from './IsAlwaysKeepStatusbarHeight'
 import DrawerLayoutPosition from './DrawerLayoutPosition'
 import { useI18n } from '@/lang/i18n'
 import WyCookie from './WyCookie'
-import KgCookie from './KgCookie' // 放在顶部导入
+import NavMenu from "@/screens/Home/Views/Setting/settings/Basic/NavMenu.tsx"; // 找回菜单显示
 
 export default memo(() => {
   const t = useI18n()
@@ -27,12 +27,13 @@ export default memo(() => {
       <IsAlwaysKeepStatusbarHeight />
       <Theme />
       <DrawerLayoutPosition />
+      <NavMenu /> {/* 菜单显示设置回来了！ */}
       <Language />
       <FontSize />
       <ShareType />
       <Source />
       <SourceName />
-      <WyCookie />      
+      <WyCookie /> {/* 网易云和酷狗都在这里了 */}
     </Section>
   )
 })
