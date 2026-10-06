@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import WebLoginModal, { type WebLoginModalType } from './WebLoginModal';
-import KgWebLoginModal, { type KgWebLoginModalType } from './KgWebLoginModal';
+// 酷狗弹窗引入已移除，防止底层 WebView 崩溃
 
 export default () => {
   const modalRef = useRef<WebLoginModalType>(null);
-  const kgModalRef = useRef<KgWebLoginModalType>(null);
   const [visible, setVisible] = useState(false);
-  const [kgVisible, setKgVisible] = useState(false);
 
   useEffect(() => {
     const handleShowWy = () => {
@@ -20,30 +18,17 @@ export default () => {
       }
     };
 
-    const handleShowKg = () => {
-      if (kgVisible) {
-        kgModalRef.current?.show();
-      } else {
-        setKgVisible(true);
-        requestAnimationFrame(() => {
-          kgModalRef.current?.show();
-        });
-      }
-    };
-
     global.app_event.on('showWebLogin', handleShowWy);
-    global.app_event.on('showKugouWebLogin', handleShowKg);
     
     return () => {
       global.app_event.off('showWebLogin', handleShowWy);
-      global.app_event.off('showKugouWebLogin', handleShowKg);
     };
-  }, [visible, kgVisible]);
+  }, [visible]);
 
   return (
     <>
       {visible ? <WebLoginModal ref={modalRef} /> : null}
-      {kgVisible ? <KgWebLoginModal ref={kgModalRef} /> : null}
+      {/* 酷狗网页登录弹窗已移除，防崩溃 */}
     </>
   );
 };
