@@ -27,13 +27,13 @@ export default memo(() => {
       <IsAlwaysKeepStatusbarHeight />
       <Theme />
       <DrawerLayoutPosition />
-      <NavMenu /> {/* 菜单显示设置回来了！ */}
+      <NavMenu /> 
       <Language />
       <FontSize />
       <ShareType />
       <Source />
       <SourceName />
-      <WyCookie /> {/* 网易云和酷狗都在这里了 */}
+      <WyCookie /> 
     </Section>
   )
 })
