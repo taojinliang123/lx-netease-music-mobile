@@ -1,11 +1,9 @@
 import { memo, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet } from 'react-native'; // 去掉了 Pressable
-import { useI18n } from '@/lang';
+import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { useSettingValue } from '@/store/setting/hook';
 import { updateSetting } from '@/core/common';
 
 export default memo(() => {
-  const t = useI18n();
   const cookie = useSettingValue('common.kg_cookie') || '';
 
   const setCookie = (val: string) => {
@@ -42,13 +40,13 @@ export default memo(() => {
 const styles = StyleSheet.create({
   container: { padding: 15, marginBottom: 10 },
   label: { fontSize: 14, fontWeight: 'bold', marginBottom: 8 },
-  input: { 
-    borderWidth: 1, 
-    borderColor: '#ccc', 
-    borderRadius: 5, 
-    padding: 10, 
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    padding: 10,
     fontSize: 14,
-    marginBottom: 8
+    marginBottom: 8,
   },
-  tip: { fontSize: 12, color: '#999' }
+  tip: { fontSize: 12, color: '#999' },
 });
