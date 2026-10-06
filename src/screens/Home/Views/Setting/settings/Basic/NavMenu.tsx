@@ -1,10 +1,11 @@
 import { memo, useMemo } from 'react';
-import { StyleSheet, View, Text, Pressable } from 'react-native';
+import { StyleSheet, View, Pressable } from 'react-native';
 import { useSettingValue } from '@/store/setting/hook';
 import { useI18n } from '@/lang';
 import { updateSetting } from '@/core/common';
 import { NAV_MENUS, NAV_ID_Type } from '@/config/constant';
 import { useTheme } from '@/store/theme/hook';
+import Text from '@/components/common/Text'; // 👈 【关键】：改用项目自带的自定义 Text 组件
 
 const Item = ({ id, name }: { id: NAV_ID_Type; name: string }) => {
   const navStatus = useSettingValue('common.navStatus');
@@ -17,20 +18,19 @@ const Item = ({ id, name }: { id: NAV_ID_Type; name: string }) => {
     updateSetting({ 'common.navStatus': { ...navStatus, [id]: !isChecked } });
   };
 
-  // 👇 安全提取颜色的神器：不管主题返回的是字符串、对象还是CSS变量，都能安全退回默认颜色
+  // 安全获取颜色，如果取不到就用兜底颜色，绝不崩溃
   const getColor = (key: string, fallback: string) => {
     const val = theme?.[key];
-    if (typeof val === 'string') return val;
-    if (val && typeof val === 'object' && typeof val.color === 'string') return val.color;
-    return fallback;
+    return typeof val === 'string' ? val : fallback;
   };
 
-  // 使用提取器获取颜色。如果主题取不到，就会使用括号里的兜底颜色
+  // 勾选符号颜色（选中变主题绿，禁用或未选中变灰）
   const checkColor = isChecked
     ? (isDisabled ? getColor('c-primary-alpha-600', '#2EB981') : getColor('c-primary', '#2EB981'))
     : (isDisabled ? getColor('c-400', '#999') : getColor('c-600', '#999'));
 
-  const textColor = getColor('c-500', '#333');
+  // 菜单文字颜色（跟随主题字体色）
+  const textColor = getColor('c-font', '#333');
 
   return (
     <Pressable
@@ -44,16 +44,18 @@ const Item = ({ id, name }: { id: NAV_ID_Type; name: string }) => {
         opacity: isDisabled ? 0.5 : 1
       }}
     >
-      <Text style={{ fontSize: 16, color: checkColor, marginRight: 4 }}>
+      {/* 使用自定义 Text 的 size 和 color 属性 */}
+      <Text size={16} color={checkColor} style={{ marginRight: 4 }}>
         {isChecked ? '[√]' : '[ ]'}
       </Text>
-      <Text style={{ fontSize: 16, color: textColor }}>{name}</Text>
+      <Text size={16} color={textColor}>{name}</Text>
     </Pressable>
   );
 };
 
 export default memo(() => {
   const t = useI18n();
+  const theme = useTheme();
   const menuList = useMemo(() => {
     return NAV_MENUS
       .filter(item => item.id !== 'nav_play_history')
@@ -62,7 +64,9 @@ export default memo(() => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.subTitle}>{t('setting_basic_nav_menu')}</Text>
+      <Text size={14} color={theme['c-500'] || '#666'} style={styles.subTitle}>
+        {t('setting_basic_nav_menu')}
+      </Text>
       <View style={styles.list}>
         {menuList.map(({ id, name }) => (
           <Item key={id} id={id} name={name} />
@@ -74,6 +78,6 @@ export default memo(() => {
 
 const styles = StyleSheet.create({
   container: { marginBottom: 15 },
-  subTitle: { fontSize: 14, fontWeight: 'bold', marginBottom: 8, opacity: 0.7 },
+  subTitle: { fontWeight: 'bold', marginBottom: 8, opacity: 0.7 },
   list: { flexDirection: 'row', flexWrap: 'wrap' },
 });
