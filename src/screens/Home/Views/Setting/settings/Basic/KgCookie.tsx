@@ -14,10 +14,10 @@ export default memo(() => {
     (text: string) => {
       updateSetting({ 'common.kg_cookie': text });
       if (text && text.length > 50) {
-        toast(t('setting_basic_kg_cookie') + ' ' + t('saved' as any));
+        toast('酷狗音乐 Cookie 已保存');
       }
     },
-    [t],
+    [],
   );
 
   useEffect(() => {
@@ -35,16 +35,14 @@ export default memo(() => {
     <View style={styles.content}>
       <InputItem
         value={kgCookie}
-        label={t('setting_basic_kg_cookie')}
+        label="酷狗音乐 Cookie"
         onChanged={handleKgCookieChanged}
-        placeholder={t('setting_basic_kg_cookie_placeholder')}
+        placeholder="在此处粘贴你的酷狗音乐 Cookie"
       />
     </View>
   );
 });
 
 const styles = createStyle({
-  content: {
-    // marginTop: 10,
-  },
+  content: {},
 });
