@@ -1,92 +1,32 @@
-import { memo, useEffect, useRef, useCallback, useState } from 'react'
-import { TouchableOpacity, View } from 'react-native'
-import Text from '@/components/common/Text'
+import { memo, useEffect, useRef, useState } from 'react'
+import { View } from 'react-native'
 import OnlineList, { type OnlineListType } from '@/components/OnlineList'
-import kgApi from '@/utils/musicSdk/kg' // 👈 【换芯】：改用酷狗API
-import { useSettingValue } from '@/store/setting/hook'
-import { toast } from '@/utils/tools'
+import kgApi from '@/utils/musicSdk/kg' // 👈 酷狗引擎
 import { useI18n } from '@/lang'
-import { autoSaveDailyPlaylist, handlePlay } from './listAction'
+import { toast } from '@/utils/tools'
 import { usePlayerMusicInfo } from '@/store/player/hook'
-import { useTheme } from '@/store/theme/hook'
-import playerState from '@/store/player/state'
-import listState from '@/store/list/state'
-import { LIST_IDS } from '@/config/constant'
-import { getDailyRecSongsCache, setDailyRecSongsCache, clearDailyRecSongsCache } from '@/core/cache'
+import { handlePlay } from '@/utils/player' // 👈 改用公共播放逻辑，防止网易云专属逻辑崩溃
 
 export default memo(() => {
   const listRef = useRef<OnlineListType>(null)
   const [isLoading, setIsLoading] = useState(true)
   const t = useI18n()
-  const cookie = useSettingValue('common.kg_cookie') // 👈 【换芯】：读取酷狗Cookie
   const playerMusicInfo = usePlayerMusicInfo()
-  const theme = useTheme()
 
   useEffect(() => {
-    const handleJumpPosition = () => {
-      const listId = playerState.playMusicInfo.listId === LIST_IDS.TEMP
-        ? listState.tempListMeta.id
-        : playerState.playMusicInfo.listId
-
-      // 👈 【换芯】：列表ID改成酷狗的
-      if (!listId?.startsWith('dailyrec_kg')) return
-
-      const musicInfo = playerState.playMusicInfo.musicInfo
-      if (musicInfo) {
-        listRef.current?.scrollToInfo(musicInfo as LX.Music.MusicInfoOnline)
-      }
-    }
-
-    global.app_event.on('jumpListPosition', handleJumpPosition)
-    return () => {
-      global.app_event.off('jumpListPosition', handleJumpPosition)
-    }
-  }, [])
-
-  useEffect(() => {
-    const cachedSongs = getDailyRecSongsCache()
-    if (cachedSongs) {
-      setTimeout(() => {
-        listRef.current?.setList(cachedSongs, false)
-        listRef.current?.setStatus('idle')
-        setIsLoading(false)
-      }, 0)
-    } else {
-      setIsLoading(true)
-      listRef.current?.setStatus('loading')
-      // 👈 【换芯】：调用酷狗API，不用传cookie，底层会自己读
-      kgApi.dailyRec.getList().then((result: any) => {
-        listRef.current?.setList(result.list, false)
-        listRef.current?.setStatus('idle')
-        setDailyRecSongsCache(result.list)
-        if (result.list && result.list.length > 0) {
-          void autoSaveDailyPlaylist(result.list)
-        }
-      }).catch((err: any) => {
-        console.error(err)
-        toast(t('load_failed'), 'long')
-        listRef.current?.setStatus('error')
-      }).finally(() => {
-        setIsLoading(false)
-      })
-    }
-  }, [t])
-
-  const handleRefresh = useCallback(() => {
-    listRef.current?.setStatus('refreshing')
-    clearDailyRecSongsCache()
+    setIsLoading(true)
+    listRef.current?.setStatus('loading')
+    
+    // 👈 直接调用酷狗API，不依赖任何网易云的缓存和后台任务
     kgApi.dailyRec.getList().then((result: any) => {
-      listRef.current?.setList(result.list, false)
-      setDailyRecSongsCache(result.list)
-      if (result.list && result.list.length > 0) {
-        void autoSaveDailyPlaylist(result.list)
-      }
+      listRef.current?.setList(result.list || [], false)
+      listRef.current?.setStatus('idle')
     }).catch((err: any) => {
-      console.error(err)
+      console.error('[KugouDaily] 加载失败', err)
       toast(t('load_failed'), 'long')
       listRef.current?.setStatus('error')
     }).finally(() => {
-      listRef.current?.setStatus('idle')
+      setIsLoading(false)
     })
   }, [t])
 
@@ -94,7 +34,7 @@ export default memo(() => {
     <View style={{ flex: 1 }}>
       <OnlineList
         ref={listRef}
-        listId="dailyrec_kg" // 👈 【换芯】：列表ID改成酷狗的
+        listId="dailyrec_kg" // 👈 专属酷狗的列表ID
         forcePlayList={true}
         playingId={playerMusicInfo.id}
         onPlayList={(index) => {
@@ -102,7 +42,17 @@ export default memo(() => {
           if (!list) return
           handlePlay(list, index)
         }}
-        onRefresh={handleRefresh}
+        onRefresh={() => {
+          listRef.current?.setStatus('refreshing')
+          kgApi.dailyRec.getList().then((result: any) => {
+            listRef.current?.setList(result.list || [], false)
+          }).catch((err: any) => {
+            console.error(err)
+            toast(t('load_failed'), 'long')
+          }).finally(() => {
+            listRef.current?.setStatus('idle')
+          })
+        }}
         onLoadMore={() => {}}
         checkHomePagerIdle
       />
