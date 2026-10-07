@@ -22,7 +22,9 @@ import { useSettingValue } from "@/store/setting/hook.ts";
 import PlayHistory from '../Views/PlayHistory'
 import { useTheme } from '@/store/theme/hook'
 import OneDrive from '../Views/OneDrive'
-import Text from '@/components/common/Text' // 👈 【新增】：用项目自带的安全 Text，防止红框
+import Text from '@/components/common/Text'
+// 👇 【新增】：引入我们刚建的酷狗每日推荐文件夹（注意路径是我们刚新建的 KugouDaily）
+import KugouDaily from '../Views/KugouDaily'
 
 const hideKeys = ['list.isShowAlbumName', 'list.isShowInterval', 'theme.fontShadow'] as Readonly<
   Array<keyof LX.AppSetting>
@@ -375,47 +377,40 @@ const OneDrivePage = () => {
   return visible ? component : null
 }
 
-// 👇 【新增】：酷狗每日推荐（安全占位页，只渲染 View 和 Text，绝对不崩！）
+// 👇 【新增】：酷狗每日推荐（直接使用刚复制过来的 KugouDaily 完整结构）
 const KugouDailyPage = () => {
   const [visible, setVisible] = useState(commonState.navActiveId == 'nav_kugou_daily')
-  const component = useMemo(() => (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text size={18}>酷狗每日推荐（占位页面，待后续接入真正的数据）</Text>
-    </View>
-  ), [])
+  const component = useMemo(() => <KugouDaily />, [])
   useEffect(() => {
+    let currentId: CommonState['navActiveId'] = commonState.navActiveId
     const handleNavIdUpdate = (id: CommonState['navActiveId']) => {
-      requestAnimationFrame(() => {
-        setVisible(id == 'nav_kugou_daily')
-      })
+      currentId = id
+      if (id == 'nav_kugou_daily') {
+        requestAnimationFrame(() => {
+          setVisible(true)
+        })
+      }
+    }
+    const handleHide = () => {
+      if (currentId != 'nav_setting') return
+      setVisible(false)
+    }
+    const handleConfigUpdated = (keys: Array<keyof LX.AppSetting>) => {
+      if (keys.some((k) => hideKeys.includes(k))) handleHide()
     }
     global.state_event.on('navActiveIdUpdated', handleNavIdUpdate)
-    return () => {
-      global.state_event.off('navActiveIdUpdated', handleNavIdUpdate)
-    }
-  }, [])
-  return visible ? component : null
-}
+    global.state_event.on('themeUpdated', handleHide)
+    global.state_event.on('languageChanged', handleHide)
+    global.state_event.on('configUpdated', handleConfigUpdated)
 
-// 👇 【新增】：酷狗猜你喜欢（安全占位页）
-const KugouGuessPage = () => {
-  const [visible, setVisible] = useState(commonState.navActiveId == 'nav_kugou_guess')
-  const component = useMemo(() => (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text size={18}>酷狗猜你喜欢（占位页面，待后续接入真正的数据）</Text>
-    </View>
-  ), [])
-  useEffect(() => {
-    const handleNavIdUpdate = (id: CommonState['navActiveId']) => {
-      requestAnimationFrame(() => {
-        setVisible(id == 'nav_kugou_guess')
-      })
-    }
-    global.state_event.on('navActiveIdUpdated', handleNavIdUpdate)
     return () => {
       global.state_event.off('navActiveIdUpdated', handleNavIdUpdate)
+      global.state_event.off('themeUpdated', handleHide)
+      global.state_event.off('languageChanged', handleHide)
+      global.state_event.off('configUpdated', handleConfigUpdated)
     }
   }, [])
+
   return visible ? component : null
 }
 
@@ -515,8 +510,8 @@ const Main = () => {
       nav_subscribed_albums: <SubscribedAlbumsPage />,
       nav_my_playlist: <MyPlaylistPage />,
       nav_onedrive: <OneDrivePage />,
-      nav_kugou_daily: <KugouDailyPage />, // 👈 【新增】
-      nav_kugou_guess: <KugouGuessPage />, // 👈 【新增】
+      nav_kugou_daily: <KugouDailyPage />, // 👈 【修改】：接上真正的酷狗每日推荐
+      // nav_kugou_guess: <KugouGuessPage />, // 👈 【暂时注释】：猜你喜欢咱们留到以后再加，先把每日推荐跑通
       nav_setting: <SettingPage />,
     };
 
