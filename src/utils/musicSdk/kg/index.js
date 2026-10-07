@@ -6,16 +6,16 @@ import pic from './pic'
 import lyric from './lyric'
 import hotSearch from './hotSearch'
 import comment from './comment'
+import dailyRec from './dailyRec' // 👈 【新增】：挂载酷狗每日推荐
 import {resolveQualityAlias} from "@/utils/musicSdk/utils";
-// import tipSearch from './tipSearch'
 
 const kg = {
-  // tipSearch,
   leaderboard,
   songList,
   musicSearch,
   hotSearch,
   comment,
+  dailyRec, // 👈 【新增】：对外暴露接口
   getMusicUrl(songInfo, type) {
     const qualityToRequest = resolveQualityAlias('kg', type);
     return apis('kg').getMusicUrl(songInfo, qualityToRequest);
