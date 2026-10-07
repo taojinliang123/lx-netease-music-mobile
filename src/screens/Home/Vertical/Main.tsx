@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef, type ReactNode } from 'react'
-import {Keyboard, View} from 'react-native'
+import { Keyboard, View } from 'react-native'
 import Search from '../Views/Search'
 import SongList from '../Views/SongList'
 import Mylist from '../Views/Mylist'
@@ -17,11 +17,12 @@ import DailyRec from '../Views/DailyRec'
 import MyPlaylist from '../Views/MyPlaylist'
 import FollowedArtists from '../Views/FollowedArtists'
 import SubscribedAlbums from '../Views/SubscribedAlbums';
-import {NAV_MENUS, type NAV_ID_Type} from "@/config/constant.ts";
-import {useSettingValue} from "@/store/setting/hook.ts";
+import { NAV_MENUS, type NAV_ID_Type } from "@/config/constant.ts";
+import { useSettingValue } from "@/store/setting/hook.ts";
 import PlayHistory from '../Views/PlayHistory'
 import { useTheme } from '@/store/theme/hook'
 import OneDrive from '../Views/OneDrive'
+import Text from '@/components/common/Text' // 👈 【新增】：用项目自带的安全 Text，防止红框
 
 const hideKeys = ['list.isShowAlbumName', 'list.isShowInterval', 'theme.fontShadow'] as Readonly<
   Array<keyof LX.AppSetting>
@@ -96,7 +97,6 @@ const SongListPage = () => {
   }, [])
 
   return visible ? component : null
-  // return activeId == 1 || activeId == 0  ? SongList : null
 }
 const PlayHistoryOverlay = () => {
   const [visible, setVisible] = useState(commonState.navActiveId == 'nav_play_history')
@@ -189,7 +189,7 @@ const DailyRecPage = () => {
       global.state_event.off('navActiveIdUpdated', handleNavIdUpdate)
       global.state_event.off('themeUpdated', handleHide)
       global.state_event.off('languageChanged', handleHide)
-      global.state_event.on('configUpdated', handleConfigUpdated)
+      global.state_event.off('configUpdated', handleConfigUpdated)
     }
   }, [])
 
@@ -225,7 +225,7 @@ const MylistPage = () => {
       global.state_event.off('navActiveIdUpdated', handleNavIdUpdate)
       global.state_event.off('themeUpdated', handleHide)
       global.state_event.off('languageChanged', handleHide)
-      global.state_event.on('configUpdated', handleConfigUpdated)
+      global.state_event.off('configUpdated', handleConfigUpdated)
     }
   }, [])
 
@@ -261,7 +261,7 @@ const MyPlaylistPage = () => {
             global.state_event.off('navActiveIdUpdated', handleNavIdUpdate)
             global.state_event.off('themeUpdated', handleHide)
             global.state_event.off('languageChanged', handleHide)
-            global.state_event.on('configUpdated', handleConfigUpdated)
+            global.state_event.off('configUpdated', handleConfigUpdated)
           }
       }, [])
 
@@ -297,7 +297,7 @@ const FollowedArtistsPage = () => {
       global.state_event.off('navActiveIdUpdated', handleNavIdUpdate)
       global.state_event.off('themeUpdated', handleHide)
       global.state_event.off('languageChanged', handleHide)
-      global.state_event.on('configUpdated', handleConfigUpdated)
+      global.state_event.off('configUpdated', handleConfigUpdated)
     }
   }, [])
 
@@ -333,7 +333,7 @@ const SubscribedAlbumsPage = () => {
       global.state_event.off('navActiveIdUpdated', handleNavIdUpdate)
       global.state_event.off('themeUpdated', handleHide)
       global.state_event.off('languageChanged', handleHide)
-      global.state_event.on('configUpdated', handleConfigUpdated)
+      global.state_event.off('configUpdated', handleConfigUpdated)
     }
   }, []);
   return visible ? component : null;
@@ -375,6 +375,50 @@ const OneDrivePage = () => {
   return visible ? component : null
 }
 
+// 👇 【新增】：酷狗每日推荐（安全占位页，只渲染 View 和 Text，绝对不崩！）
+const KugouDailyPage = () => {
+  const [visible, setVisible] = useState(commonState.navActiveId == 'nav_kugou_daily')
+  const component = useMemo(() => (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <Text size={18}>酷狗每日推荐（占位页面，待后续接入真正的数据）</Text>
+    </View>
+  ), [])
+  useEffect(() => {
+    const handleNavIdUpdate = (id: CommonState['navActiveId']) => {
+      requestAnimationFrame(() => {
+        setVisible(id == 'nav_kugou_daily')
+      })
+    }
+    global.state_event.on('navActiveIdUpdated', handleNavIdUpdate)
+    return () => {
+      global.state_event.off('navActiveIdUpdated', handleNavIdUpdate)
+    }
+  }, [])
+  return visible ? component : null
+}
+
+// 👇 【新增】：酷狗猜你喜欢（安全占位页）
+const KugouGuessPage = () => {
+  const [visible, setVisible] = useState(commonState.navActiveId == 'nav_kugou_guess')
+  const component = useMemo(() => (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <Text size={18}>酷狗猜你喜欢（占位页面，待后续接入真正的数据）</Text>
+    </View>
+  ), [])
+  useEffect(() => {
+    const handleNavIdUpdate = (id: CommonState['navActiveId']) => {
+      requestAnimationFrame(() => {
+        setVisible(id == 'nav_kugou_guess')
+      })
+    }
+    global.state_event.on('navActiveIdUpdated', handleNavIdUpdate)
+    return () => {
+      global.state_event.off('navActiveIdUpdated', handleNavIdUpdate)
+    }
+  }, [])
+  return visible ? component : null
+}
+
 const SettingPage = () => {
   const [visible, setVisible] = useState(commonState.navActiveId == 'nav_setting')
   const component = useMemo(() => <Setting />, [])
@@ -398,9 +442,8 @@ const SettingPage = () => {
 const Main = () => {
   const pagerViewRef = useRef<ComponentRef<typeof PagerView>>(null);
   const [activeNavId, setActiveNavIdState] = useState(commonState.navActiveId)
-  const navStatus = useSettingValue('common.navStatus'); // 获取菜单显示状态
+  const navStatus = useSettingValue('common.navStatus'); 
 
-  // 根据 navStatus 动态生成可见的菜单项、viewMap 和 indexMap
   const visibleNavs = useMemo(() => {
     return NAV_MENUS.filter(menu => isMenuVisible(menu.id, navStatus));
   }, [navStatus]);
@@ -461,7 +504,6 @@ const Main = () => {
     };
   }, [viewMap]);
 
-  // 根据 visibleNavs 动态渲染 PagerView 的子组件
   const pages = useMemo(() => {
     const pageComponents: Partial<Record<NAV_ID_Type, ReactNode>> = {
       nav_search: <SearchPage />,
@@ -473,6 +515,8 @@ const Main = () => {
       nav_subscribed_albums: <SubscribedAlbumsPage />,
       nav_my_playlist: <MyPlaylistPage />,
       nav_onedrive: <OneDrivePage />,
+      nav_kugou_daily: <KugouDailyPage />, // 👈 【新增】
+      nav_kugou_guess: <KugouGuessPage />, // 👈 【新增】
       nav_setting: <SettingPage />,
     };
 
