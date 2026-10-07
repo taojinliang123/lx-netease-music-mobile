@@ -110,7 +110,9 @@ export const NAV_MENUS = [
   { id: 'nav_subscribed_albums', icon: 'svg:album-disc' },
   { id: 'nav_my_playlist', icon: 'album' },
   { id: 'nav_onedrive', icon: 'svg:onedrive' },
-  { id: 'nav_kugou', icon: 'music' }, // 👈 【新增】：酷狗音乐入口。如果打包报图标错误，把 'music' 换成 'album' 或 'listen'
+  // 👇 【新增】：酷狗相关（无总入口，无排行榜）
+  { id: 'nav_kugou_daily', icon: 'svg:calendar' },
+  { id: 'nav_kugou_guess', icon: 'svg:artist' },
   { id: 'nav_setting', icon: 'setting' },
 ] as const
 
