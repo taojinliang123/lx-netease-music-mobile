@@ -15,11 +15,6 @@ export const LIST_IDS = {
   PLAY_LATER: null,
 } as const
 
-// export const COMPONENT_IDS = {
-//   home: 'home',
-//   playDetail: 'playDetail',
-// } as const
-// export type COMPONENT_IDS_TYPE = keyof typeof COMPONENT_IDS
 export enum COMPONENT_IDS {
   home = 'home',
   playDetail = 'playDetail',
@@ -34,7 +29,6 @@ export enum COMPONENT_IDS {
 export enum NAV_SHEAR_NATIVE_IDS {
   playDetail_pic = 'playDetail_pic',
   playDetail_header = 'playDetail_header',
-  // playDetail_pageIndicator = 'playDetail_pageIndicator',
   playDetail_player = 'playDetail_player',
   songlistDetail_pic = 'songlistDetail_pic',
   songlistDetail_title = 'songlistDetail_title',
@@ -96,8 +90,6 @@ export const storageDataPrefixOld = {
   list: '@list__',
   listPosition: '@listposition__',
   listSort: '@listsort__',
-  // lyric: '@lyric__',
-  // musicUrl: '@music_url__',
   playInfo: '@play_info',
   syncAuthKey: '@sync_auth_key',
   syncHost: '@sync_host',
@@ -118,7 +110,7 @@ export const NAV_MENUS = [
   { id: 'nav_subscribed_albums', icon: 'svg:album-disc' },
   { id: 'nav_my_playlist', icon: 'album' },
   { id: 'nav_onedrive', icon: 'svg:onedrive' },
-  // { id: 'download', icon: 'download-2' },
+  { id: 'nav_kugou', icon: 'music' }, // 👈 【新增】：酷狗音乐入口。如果打包报图标错误，把 'music' 换成 'album' 或 'listen'
   { id: 'nav_setting', icon: 'setting' },
 ] as const
 
@@ -128,12 +120,12 @@ export const LXM_FILE_EXT_RXP = ['json', 'lxmc', 'bin']
 export const USER_API_SOURCE_FILE_EXT_RXP = ['js']
 
 export const MUSIC_TOGGLE_MODE = {
-  listLoop: 'listLoop', // 列表循环
-  random: 'random', // 列表随机
-  list: 'list', // 顺序播放
-  singleLoop: 'singleLoop', // 单曲循环
-  heartbeat: 'heartbeat', // 心动模式
-  none: 'none', // 禁用
+  listLoop: 'listLoop',
+  random: 'random',
+  list: 'list',
+  singleLoop: 'singleLoop',
+  heartbeat: 'heartbeat',
+  none: 'none',
 } as const
 
 export const MUSIC_TOGGLE_MODE_LIST = [
@@ -165,6 +157,5 @@ export const DEFAULT_SETTING = {
 
   viewPrevState: {
     id: 'nav_search' as NAV_ID_Type,
-    // query: {},
   },
 }
