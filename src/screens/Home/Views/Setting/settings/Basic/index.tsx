@@ -13,6 +13,7 @@ import IsAlwaysKeepStatusbarHeight from './IsAlwaysKeepStatusbarHeight'
 import DrawerLayoutPosition from './DrawerLayoutPosition'
 import { useI18n } from '@/lang/i18n'
 import WyCookie from './WyCookie'
+import KgCookie from './KgCookie' // 👈 【新增】
 import NavMenu from "@/screens/Home/Views/Setting/settings/Basic/NavMenu.tsx";
 
 export default memo(() => {
@@ -32,6 +33,7 @@ export default memo(() => {
       <Source />
       <SourceName />
       <WyCookie /> 
+      <KgCookie /> {/* 👈 【新增】：挂载酷狗独立组件 */}
     </Section>
   )
 })
