@@ -31,7 +31,7 @@ export default memo(() => {
       <ShareType />
       <Source />
       <SourceName />
-      <WyCookie /> {/* 👈 就保留这一个，酷狗已安全合并进去 */}
+      <WyCookie /> 
     </Section>
   )
 })
