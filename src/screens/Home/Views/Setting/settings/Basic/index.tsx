@@ -14,7 +14,8 @@ import IsAlwaysKeepStatusbarHeight from './IsAlwaysKeepStatusbarHeight'
 import DrawerLayoutPosition from './DrawerLayoutPosition'
 import { useI18n } from '@/lang/i18n'
 import WyCookie from './WyCookie'
-import NavMenu from "@/screens/Home/Views/Setting/settings/Basic/NavMenu.tsx"; // 找回菜单显示
+import KgCookie from './KgCookie' // 👈 【新增】：咱们自己新建的独立酷狗组件
+import NavMenu from "@/screens/Home/Views/Setting/settings/Basic/NavMenu.tsx";
 
 export default memo(() => {
   const t = useI18n()
@@ -34,6 +35,7 @@ export default memo(() => {
       <Source />
       <SourceName />
       <WyCookie /> 
+      <KgCookie /> {/* 👈 【新增】：把新组件挂上去 */}
     </Section>
   )
 })
