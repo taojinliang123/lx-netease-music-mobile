@@ -1,123 +1,97 @@
-import { memo, useEffect, useState, useRef, useCallback } from 'react'
-import { View, Modal, TextInput, TouchableOpacity, StyleSheet } from 'react-native'
-import Text from '@/components/common/Text'
-import OnlineList, { type OnlineListType } from '@/components/OnlineList'
-import kgApi from '@/utils/musicSdk/kg'
-import { useSettingValue } from '@/store/setting/hook'
-import { updateSetting } from '@/core/common'
-import { useTheme } from '@/store/theme/hook'
-import { usePlayerMusicInfo } from '@/store/player/hook'
-import { toast } from '@/utils/tools'
-import { handlePlay } from './listAction' // 复用 DailyRec 复制过来的播放逻辑
+import { httpFetch } from '../../request'
+import settingState from "@/store/setting/state"
+import { signatureParams } from './util'
+import leaderboard from './leaderboard'
 
-export default memo(() => {
-  const listRef = useRef<OnlineListType>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [errorMsg, setErrorMsg] = useState('')
-  const [showModal, setShowModal] = useState(false)
-  const [tempCookie, setTempCookie] = useState('')
-  
-  const kgCookie = useSettingValue('common.kg_cookie') || ''
-  const playerMusicInfo = usePlayerMusicInfo()
-  const theme = useTheme()
+const getCookieValue = (cookieStr, key) => {
+  if (!cookieStr) return ''
+  const match = cookieStr.match(new RegExp(`(^|;\\s*)${key}=([^;]*)`))
+  return match ? match[2] : ''
+}
 
-  const loadData = useCallback(() => {
-    setIsLoading(true)
-    setErrorMsg('')
+// 酷狗数据转为列表格式
+const transformSong = (item, index) => {
+  try {
+    const hash = item.hash || item.audio_info?.hash || ''
+    const audioId = item.audio_id || item.audio_info?.audio_id || 0
+    const songname = item.songname || item.audio_info?.songname || item.name || '未知歌曲'
+    const singername = item.author_name || item.singername || item.audio_info?.singername || '未知歌手'
+    const rawDuration = item.time_length || item.timelength || item.timelen || item.duration || 0
     
-    kgApi.dailyRec.getList().then((result: any) => {
-      const songs = result?.list || []
-      if (songs.length === 0) {
-        setErrorMsg('酷狗接口返回为空（可能是Cookie失效或签名错误）')
-      }
-      listRef.current?.setList(songs, false)
-      listRef.current?.setStatus('idle')
-    }).catch((err: any) => {
-      setErrorMsg(`请求失败: ${err.message || '未知错误'}`)
-      listRef.current?.setList([], false)
-      listRef.current?.setStatus('idle')
-    }).finally(() => {
-      setIsLoading(false)
-    })
-  }, [])
-
-  useEffect(() => {
-    loadData()
-  }, [loadData])
-
-  const handleSaveCookie = () => {
-    updateSetting({ 'common.kg_cookie': tempCookie })
-    setShowModal(false)
-    toast('酷狗 Cookie 已保存！')
-    setTimeout(loadData, 500)
+    let img = item.sizable_cover || item.image || item.audio_info?.image || ''
+    if (!img && hash) {
+      img = `https://imge.kugou.com/stdmusic/400/${hash.substring(0, 8)}.jpg`
+    }
+    
+    return {
+      id: `kg__${hash}`,
+      name: songname,
+      singer: singername,
+      source: 'kg',
+      img: img,
+      hash: hash,
+      songmid: String(audioId),
+      mixSongId: item.mixsongid || 0,
+      types: [{ type: '128k', size: null }],
+      _types: { '128k': { size: null } },
+      meta: {
+        songId: String(audioId),
+        hash: hash,
+        picUrl: img,
+        qualitys: [{ type: '128k', size: null }],
+        _qualitys: { '128k': { size: null } },
+      },
+    }
+  } catch (e) {
+    return null
   }
+}
 
-  return (
-    <View style={{ flex: 1, backgroundColor: theme['c-content-background'] }}>
-      {/* 👇 顶部工具条，跟随主题色 */}
-      <View style={[styles.toolbar, { backgroundColor: theme['c-primary'] }]}>
-        <TouchableOpacity style={styles.btn} onPress={() => { setTempCookie(kgCookie); setShowModal(true) }}>
-          <Text color="#fff" size={14}>设置酷狗 Cookie</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.btn} onPress={loadData}>
-          <Text color="#fff" size={14}>刷新</Text>
-        </TouchableOpacity>
-      </View>
+export default {
+  async getList(page = 1, limit = 30, retryNum = 0) {
+    if (retryNum > 2) return Promise.reject(new Error('try max num'))
 
-      {errorMsg ? (
-        <View style={{ padding: 20 }}>
-          <Text size={14} color={theme['c-primary']}>{errorMsg}</Text>
-        </View>
-      ) : null}
+    try {
+      const cookieStr = settingState.setting['common.kg_cookie'] || ''
+      const mid = getCookieValue(cookieStr, 'kg_mid') || '-'
+      const dfid = getCookieValue(cookieStr, 'kg_dfid') || '-'
+      const userid = getCookieValue(cookieStr, 'KugooID') || '0'
+      const token = getCookieValue(cookieStr, 'token') || getCookieValue(cookieStr, 't') || ''
 
-      {/* 👇 将万能列表组件请回来！自带滑动、点击播放、主题跟随 */}
-      <OnlineList
-        ref={listRef}
-        listId="dailyrec_kg"
-        forcePlayList={true}
-        playingId={playerMusicInfo.id}
-        onPlayList={(index) => {
-          const list = listRef.current?.getList()
-          if (!list) return
-          handlePlay(list, index)
-        }}
-        onRefresh={loadData}
-        onLoadMore={() => {}}
-        checkHomePagerIdle
-      />
+      const clienttime = Math.floor(Date.now() / 1000)
+      const paramsMap = {
+        dfid: dfid, mid: mid, uuid: '-', appid: '1005',
+        clientver: '20489', clienttime: clienttime, platform: 'ios',
+        userid: Number(userid) || 0,
+      }
+      if (token) paramsMap.token = token
 
-      {/* 酷狗 Cookie 弹窗（独立渲染层，绝不会跟底层打架） */}
-      <Modal visible={showModal} transparent={true} animationType="fade" onRequestClose={() => setShowModal(false)}>
-        <View style={styles.modalBg}>
-          <View style={[styles.modalContent, { backgroundColor: theme['c-content-background'] }]}>
-            <Text size={16} style={{ marginBottom: 10 }} color={theme['c-font']}>粘贴酷狗音乐 Cookie</Text>
-            <TextInput
-              style={[styles.input, { color: theme['c-font'], borderColor: theme['c-border-background'] }]}
-              multiline={true}
-              value={tempCookie}
-              onChangeText={setTempCookie}
-              placeholder="在此处粘贴完整的酷狗 Cookie"
-              placeholderTextColor="#999"
-            />
-            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 15 }}>
-              <TouchableOpacity style={{ padding: 10 }} onPress={() => setShowModal(false)}>
-                <Text color="#666">取消</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={{ padding: 10 }} onPress={handleSaveCookie}>
-                <Text color={theme['c-primary']}>保存</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-    </View>
-  )
-})
+      const paramList = Object.keys(paramsMap).sort().map(k => `${k}=${paramsMap[k]}`).join('&')
+      const sig = signatureParams(paramList, 'android', '')
+      const url = `https://gateway.kugou.com/everyday_song_recommend?${paramList}&signature=${sig}`
 
-const styles = StyleSheet.create({
-  toolbar: { flexDirection: 'row', padding: 10 },
-  btn: { paddingHorizontal: 15, paddingVertical: 8, marginRight: 10, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 5 },
-  modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
-  modalContent: { width: '90%', padding: 20, borderRadius: 10 },
-  input: { height: 120, borderWidth: 1, borderRadius: 5, padding: 10, textAlignVertical: 'top' },
-})
+      const { body, statusCode } = await httpFetch(url, {
+        method: 'POST',
+        headers: {
+          'User-Agent': 'Android15-1070-11440-46-0-DiscoveryDRADProtocol-wifi',
+          'x-router': 'everydayrec.service.kugou.com',
+          'Content-Type': 'application/json',
+          'Cookie': cookieStr,
+        },
+      }).promise
+
+      if (statusCode === 200 && (body?.status === 1 || body?.error_code === 0)) {
+        const rawSongs = body?.data?.song_list || body?.data?.songs || body?.data?.list || []
+        if (rawSongs.length > 0) {
+          const listData = rawSongs.map((item, i) => transformSong(item, i)).filter(Boolean)
+          return { list: listData, source: 'kg' }
+        }
+      }
+      throw new Error('每日推荐无数据')
+    } catch (error) {
+      console.log(`[KG DailyRec] 每日推荐失败`, error.message)
+      if (retryNum < 2) return this.getList(page, limit, retryNum + 1)
+      return leaderboard.getList('8888', 1, 30)
+    }
+  },
+}
