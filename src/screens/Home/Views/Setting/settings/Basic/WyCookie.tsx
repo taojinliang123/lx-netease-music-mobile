@@ -8,7 +8,6 @@ import { createStyle, toast } from '@/utils/tools';
 import Button from '../../components/Button';
 import CookieManager from '@react-native-cookies/cookies';
 
-// 网易云同步（保留原样，不动它）
 const syncCookieToNative = async (cookie: string) => {
   const domain = 'https://music.163.com';
   try {
@@ -35,10 +34,8 @@ const syncCookieToNative = async (cookie: string) => {
 
 export default memo(() => {
   const t = useI18n();
-  
   const wyCookie = useSettingValue('common.wy_cookie') || '';
   const serpApiKey = useSettingValue('common.wy_serpapi_key') || '';
-  const kgCookie = useSettingValue('common.kg_cookie') || ''; // 👈 酷狗数据
 
   const setWyCookie = (val: string) => {
     void syncCookieToNative(val).then(() => {
@@ -60,26 +57,11 @@ export default memo(() => {
     global.app_event.emit('showWebLogin');
   };
 
-  // 👈 酷狗存储（纯本地，不碰原生 CookieManager，保证不弹同步失败、不崩）
-  const setKgCookie = (val: string) => {
-    updateSetting({ 'common.kg_cookie': val });
-  };
-
-  const handleKgChanged: InputItemProps['onChanged'] = (text, callback) => {
-    callback(text);
-    setKgCookie(text);
-  };
-
   useEffect(() => {
     const handleWyCookieSet = (cookie: string) => { setWyCookie(cookie); };
-    const handleKgCookieSet = (cookie: string) => { setKgCookie(cookie); };
-
     global.app_event.on('wy-cookie-set', handleWyCookieSet);
-    global.app_event.on('kg-cookie-set', handleKgCookieSet); 
-
     return () => {
       global.app_event.off('wy-cookie-set', handleWyCookieSet);
-      global.app_event.off('kg-cookie-set', handleKgCookieSet);
     };
   }, []);
 
@@ -100,13 +82,6 @@ export default memo(() => {
       <View style={styles.btnContainer}>
         <Button onPress={handleShowLoginModal}>网页登录</Button>
       </View>
-
-      <InputItem
-        value={kgCookie}
-        label="酷狗音乐 Cookie"
-        onChanged={handleKgChanged}
-        placeholder="在此处粘贴你的酷狗音乐 Cookie"
-      />
     </View>
   );
 });
