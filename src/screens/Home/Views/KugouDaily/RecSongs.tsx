@@ -1,38 +1,46 @@
-import { memo, useEffect, useState } from 'react'
+import { memo, useEffect, useState, useRef, useCallback } from 'react'
 import { View, Modal, TextInput, TouchableOpacity, StyleSheet } from 'react-native'
 import Text from '@/components/common/Text'
+import OnlineList, { type OnlineListType } from '@/components/OnlineList'
 import kgApi from '@/utils/musicSdk/kg'
 import { useSettingValue } from '@/store/setting/hook'
 import { updateSetting } from '@/core/common'
+import { useTheme } from '@/store/theme/hook'
 import { toast } from '@/utils/tools'
 
 export default memo(() => {
-  const [songs, setSongs] = useState<any[]>([])
+  const listRef = useRef<OnlineListType>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const [errorMsg, setErrorMsg] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [tempCookie, setTempCookie] = useState('')
+  
   const kgCookie = useSettingValue('common.kg_cookie') || ''
+  const theme = useTheme()
 
-  const loadData = () => {
-    setErrorMsg('正在请求酷狗...')
-    setSongs([])
+  const loadData = useCallback(() => {
+    setIsLoading(true)
+    setErrorMsg('')
     
     kgApi.dailyRec.getList().then((result: any) => {
-      const list = result?.list || []
-      setSongs(list)
-      if (list.length === 0) {
+      const songs = result?.list || []
+      if (songs.length === 0) {
         setErrorMsg('酷狗接口返回为空（可能是Cookie失效或签名错误）')
-      } else {
-        setErrorMsg('')
       }
+      listRef.current?.setList(songs, false)
+      listRef.current?.setStatus('idle')
     }).catch((err: any) => {
       setErrorMsg(`请求失败: ${err.message || '未知错误'}`)
+      listRef.current?.setList([], false)
+      listRef.current?.setStatus('idle')
+    }).finally(() => {
+      setIsLoading(false)
     })
-  }
+  }, [])
 
   useEffect(() => {
     loadData()
-  }, [])
+  }, [loadData])
 
   const handleSaveCookie = () => {
     updateSetting({ 'common.kg_cookie': tempCookie })
@@ -42,9 +50,8 @@ export default memo(() => {
   }
 
   return (
-    <View style={{ flex: 1 }}>
-      {/* 顶部工具条 */}
-      <View style={styles.toolbar}>
+    <View style={{ flex: 1, backgroundColor: theme['c-content-background'] }}>
+      <View style={[styles.toolbar, { backgroundColor: theme['c-primary'] }]}>
         <TouchableOpacity style={styles.btn} onPress={() => { setTempCookie(kgCookie); setShowModal(true) }}>
           <Text color="#fff" size={14}>设置酷狗 Cookie</Text>
         </TouchableOpacity>
@@ -53,29 +60,26 @@ export default memo(() => {
         </TouchableOpacity>
       </View>
 
-      {/* 状态和错误信息 */}
-      <View style={{ padding: 20 }}>
-        <Text size={14} color={errorMsg.includes('为空') ? '#ff4444' : '#666'}>
-          {errorMsg || `已成功获取 ${songs.length} 首歌曲`}
-        </Text>
-      </View>
+      {errorMsg ? (
+        <View style={{ padding: 20 }}>
+          <Text size={14} color={theme['c-primary']}>{errorMsg}</Text>
+        </View>
+      ) : null}
 
-      {/* 👇 用纯 Text 展示数据，绝对不崩 */}
-      <View style={{ flex: 1, paddingHorizontal: 20 }}>
-        {songs.map((s, i) => (
-          <Text key={i} size={14} style={{ marginBottom: 5 }}>
-            {s.name} - {s.singer || '未知歌手'}
-          </Text>
-        ))}
-      </View>
+      <OnlineList
+        ref={listRef}
+        listId="dailyrec_kg"
+        forcePlayList={true}
+        onLoadMore={() => {}}
+        checkHomePagerIdle
+      />
 
-      {/* 酷狗 Cookie 安全输入弹窗 */}
       <Modal visible={showModal} transparent={true} animationType="fade" onRequestClose={() => setShowModal(false)}>
         <View style={styles.modalBg}>
-          <View style={styles.modalContent}>
-            <Text size={16} style={{ marginBottom: 10 }}>粘贴酷狗音乐 Cookie</Text>
+          <View style={[styles.modalContent, { backgroundColor: theme['c-content-background'] }]}>
+            <Text size={16} style={{ marginBottom: 10 }} color={theme['c-font']}>粘贴酷狗音乐 Cookie</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { color: theme['c-font'], borderColor: theme['c-border-background'] }]}
               multiline={true}
               value={tempCookie}
               onChangeText={setTempCookie}
@@ -87,7 +91,7 @@ export default memo(() => {
                 <Text color="#666">取消</Text>
               </TouchableOpacity>
               <TouchableOpacity style={{ padding: 10 }} onPress={handleSaveCookie}>
-                <Text color="#2EB981">保存</Text>
+                <Text color={theme['c-primary']}>保存</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -98,9 +102,9 @@ export default memo(() => {
 })
 
 const styles = StyleSheet.create({
-  toolbar: { flexDirection: 'row', padding: 10, backgroundColor: '#2EB981' },
+  toolbar: { flexDirection: 'row', padding: 10 },
   btn: { paddingHorizontal: 15, paddingVertical: 8, marginRight: 10, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 5 },
   modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
-  modalContent: { width: '90%', backgroundColor: '#fff', padding: 20, borderRadius: 10 },
-  input: { height: 120, borderWidth: 1, borderColor: '#ddd', borderRadius: 5, padding: 10, textAlignVertical: 'top' },
+  modalContent: { width: '90%', padding: 20, borderRadius: 10 },
+  input: { height: 120, borderWidth: 1, borderRadius: 5, padding: 10, textAlignVertical: 'top' },
 })
