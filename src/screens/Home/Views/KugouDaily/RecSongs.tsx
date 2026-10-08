@@ -1,36 +1,32 @@
-import { memo, useEffect, useState, useRef } from 'react'
+import { memo, useEffect, useState } from 'react'
 import { View, Modal, TextInput, TouchableOpacity, StyleSheet } from 'react-native'
 import Text from '@/components/common/Text'
-import OnlineList, { type OnlineListType } from '@/components/OnlineList'
 import kgApi from '@/utils/musicSdk/kg'
 import { useSettingValue } from '@/store/setting/hook'
 import { updateSetting } from '@/core/common'
 import { toast } from '@/utils/tools'
 
 export default memo(() => {
-  const listRef = useRef<OnlineListType>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [songs, setSongs] = useState<any[]>([])
   const [errorMsg, setErrorMsg] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [tempCookie, setTempCookie] = useState('')
   const kgCookie = useSettingValue('common.kg_cookie') || ''
 
   const loadData = () => {
-    setIsLoading(true)
-    setErrorMsg('')
+    setErrorMsg('正在请求酷狗...')
+    setSongs([])
+    
     kgApi.dailyRec.getList().then((result: any) => {
-      const songs = result?.list || []
-      if (songs.length === 0) {
+      const list = result?.list || []
+      setSongs(list)
+      if (list.length === 0) {
         setErrorMsg('酷狗接口返回为空（可能是Cookie失效或签名错误）')
+      } else {
+        setErrorMsg('')
       }
-      listRef.current?.setList(songs, false)
-      listRef.current?.setStatus('idle')
     }).catch((err: any) => {
       setErrorMsg(`请求失败: ${err.message || '未知错误'}`)
-      listRef.current?.setList([], false)
-      listRef.current?.setStatus('idle')
-    }).finally(() => {
-      setIsLoading(false)
     })
   }
 
@@ -47,6 +43,7 @@ export default memo(() => {
 
   return (
     <View style={{ flex: 1 }}>
+      {/* 顶部工具条 */}
       <View style={styles.toolbar}>
         <TouchableOpacity style={styles.btn} onPress={() => { setTempCookie(kgCookie); setShowModal(true) }}>
           <Text color="#fff" size={14}>设置酷狗 Cookie</Text>
@@ -56,20 +53,23 @@ export default memo(() => {
         </TouchableOpacity>
       </View>
 
-      {errorMsg ? (
-        <View style={{ padding: 20 }}>
-          <Text size={14} color="#ff4444">{errorMsg}</Text>
-        </View>
-      ) : null}
+      {/* 状态和错误信息 */}
+      <View style={{ padding: 20 }}>
+        <Text size={14} color={errorMsg.includes('为空') ? '#ff4444' : '#666'}>
+          {errorMsg || `已成功获取 ${songs.length} 首歌曲`}
+        </Text>
+      </View>
 
-      <OnlineList
-        ref={listRef}
-        listId="dailyrec_kg"
-        forcePlayList={true}
-        onLoadMore={() => {}}
-        checkHomePagerIdle
-      />
+      {/* 👇 用纯 Text 展示数据，绝对不崩 */}
+      <View style={{ flex: 1, paddingHorizontal: 20 }}>
+        {songs.map((s, i) => (
+          <Text key={i} size={14} style={{ marginBottom: 5 }}>
+            {s.name} - {s.singer || '未知歌手'}
+          </Text>
+        ))}
+      </View>
 
+      {/* 酷狗 Cookie 安全输入弹窗 */}
       <Modal visible={showModal} transparent={true} animationType="fade" onRequestClose={() => setShowModal(false)}>
         <View style={styles.modalBg}>
           <View style={styles.modalContent}>
