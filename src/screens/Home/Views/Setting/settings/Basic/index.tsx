@@ -1,5 +1,4 @@
 import { memo } from 'react'
-
 import Theme from '../Theme'
 import Section from '../../components/Section'
 import Source from './Source'
@@ -14,12 +13,10 @@ import IsAlwaysKeepStatusbarHeight from './IsAlwaysKeepStatusbarHeight'
 import DrawerLayoutPosition from './DrawerLayoutPosition'
 import { useI18n } from '@/lang/i18n'
 import WyCookie from './WyCookie'
-import KgCookie from './KgCookie' // 👈 【新增】：咱们自己新建的独立酷狗组件
 import NavMenu from "@/screens/Home/Views/Setting/settings/Basic/NavMenu.tsx";
 
 export default memo(() => {
   const t = useI18n()
-
   return (
     <Section title={t('setting_basic')}>
       <IsStartupAutoPlay />
@@ -34,8 +31,7 @@ export default memo(() => {
       <ShareType />
       <Source />
       <SourceName />
-      <WyCookie /> 
-      <KgCookie /> {/* 👈 【新增】：把新组件挂上去 */}
+      <WyCookie /> {/* 👈 就保留这一个，酷狗已安全合并进去 */}
     </Section>
   )
 })
