@@ -32,7 +32,6 @@ export default memo(() => {
       <Source />
       <SourceName />
       <WyCookie /> 
-      <KgCookie /> {/* 👈 【新增】：挂载酷狗独立组件 */}
-    </Section>
+      </Section>
   )
 })
