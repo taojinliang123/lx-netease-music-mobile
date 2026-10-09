@@ -19,19 +19,23 @@ const transformSong = (item, index) => {
     const rawDuration = item.time_length || item.timelength || item.timelen || item.duration || 0
     const album = item.album_name || item.albumname || item.audio_info?.album_name || '未知专辑'
     
+    // 封面兜底逻辑
     let img = item.sizable_cover || item.image || item.audio_info?.image || ''
     if (!img && hash) {
       img = `https://imge.kugou.com/stdmusic/400/${hash.substring(0, 8)}.jpg`
     }
-    
+
+    // 核心修复：时长安全换算（防止毫秒直接显示成乱码数字）
+    const safeInterval = rawDuration > 10000 ? Math.floor(rawDuration / 1000) : rawDuration
+
     return {
       id: `kg__${hash}`,
       name: songname,
       singer: singername,
       source: 'kg',
       img: img,
-      interval: rawDuration, // 补齐时长
-      album: album,          // 补齐专辑
+      interval: safeInterval, // 修复后的安全时长
+      album: album,           // 专辑
       hash: hash,
       songmid: String(audioId),
       mixSongId: item.mixsongid || 0,
