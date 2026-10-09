@@ -30,8 +30,8 @@ const transformSong = (item, index) => {
       singer: singername,
       source: 'kg',
       img: img,
-      interval: rawDuration, // 新增：时长
-      album: album,          // 新增：专辑名
+      interval: rawDuration, // 补齐时长
+      album: album,          // 补齐专辑
       hash: hash,
       songmid: String(audioId),
       mixSongId: item.mixsongid || 0,
