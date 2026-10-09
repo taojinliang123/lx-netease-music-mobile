@@ -11,16 +11,16 @@ import IsStartupAutoPlay from './IsStartupAutoPlay'
 import IsStartupPushPlayDetailScreen from './IsStartupPushPlayDetailScreen'
 import IsAutoHidePlayBar from './IsAutoHidePlayBar'
 import IsHomePageScroll from './IsHomePageScroll'
-import IsAllowProgressBarSeek from './IsAllowProgressBarSeek'
+// import IsAllowProgressBarSeek from './IsAllowProgressBarSeek' // 已注释：文件不存在，导致打包崩溃
 import IsUseSystemFileSelector from './IsUseSystemFileSelector'
 import IsAlwaysKeepStatusbarHeight from './IsAlwaysKeepStatusbarHeight'
 import IsShowBackBtn from './IsShowBackBtn'
 import IsShowExitBtn from './IsShowExitBtn'
 import DrawerLayoutPosition from './DrawerLayoutPosition'
 
-// 引入你之前的网易云组件，和刚刚写好的酷狗组件
+// 引入网易云组件，酷狗组件暂时注释掉，先保证打包成功
 import WyCookie from './WyCookie'
-import KgCookie from './KgCookie'
+// import KgCookie from './KgCookie'
 import NavMenu from './NavMenu'
 
 import { useI18n } from '@/lang/i18n'
@@ -30,14 +30,13 @@ export default memo(() => {
 
   return (
     <Section title={t('setting_basic')}>
-      {/* 原版基础设置区 */}
       <IsStartupAutoPlay />
       <IsStartupPushPlayDetailScreen />
       <IsShowBackBtn />
       <IsShowExitBtn />
       <IsAutoHidePlayBar />
       <IsHomePageScroll />
-      <IsAllowProgressBarSeek />
+      {/* <IsAllowProgressBarSeek /> */} {/* 已注释 */}
       <IsUseSystemFileSelector />
       <IsAlwaysKeepStatusbarHeight />
       <Theme />
@@ -48,10 +47,8 @@ export default memo(() => {
       <Source />
       <SourceName />
 
-      {/* ============ 自定义区域 ============ */}
-      {/* 为了绝对安全，把 WyCookie、KgCookie 和 NavMenu 分开排布，不挤在一起 */}
       <WyCookie />
-      <KgCookie />
+      {/* <KgCookie /> */} {/* 已注释 */}
       <NavMenu />
     </Section>
   )
