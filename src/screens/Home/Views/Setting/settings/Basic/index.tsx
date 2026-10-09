@@ -11,17 +11,19 @@ import IsStartupAutoPlay from './IsStartupAutoPlay'
 import IsStartupPushPlayDetailScreen from './IsStartupPushPlayDetailScreen'
 import IsAutoHidePlayBar from './IsAutoHidePlayBar'
 import IsHomePageScroll from './IsHomePageScroll'
-// import IsAllowProgressBarSeek from './IsAllowProgressBarSeek' // 已注释：文件不存在，导致打包崩溃
+// import IsAllowProgressBarSeek from './IsAllowProgressBarSeek' // 注释：文件不存在，导致打包崩溃
 import IsUseSystemFileSelector from './IsUseSystemFileSelector'
 import IsAlwaysKeepStatusbarHeight from './IsAlwaysKeepStatusbarHeight'
 import IsShowBackBtn from './IsShowBackBtn'
 import IsShowExitBtn from './IsShowExitBtn'
 import DrawerLayoutPosition from './DrawerLayoutPosition'
 
-// 引入网易云组件，酷狗组件暂时注释掉，先保证打包成功
+// 引入网易云组件
 import WyCookie from './WyCookie'
+// 酷狗组件：排除法，暂时注释掉
 // import KgCookie from './KgCookie'
-import NavMenu from './NavMenu'
+// 导航菜单：排除法，暂时注释掉
+// import NavMenu from './NavMenu'
 
 import { useI18n } from '@/lang/i18n'
 
@@ -36,7 +38,7 @@ export default memo(() => {
       <IsShowExitBtn />
       <IsAutoHidePlayBar />
       <IsHomePageScroll />
-      {/* <IsAllowProgressBarSeek /> */} {/* 已注释 */}
+      {/* <IsAllowProgressBarSeek /> */} {/* 注释：文件不存在 */}
       <IsUseSystemFileSelector />
       <IsAlwaysKeepStatusbarHeight />
       <Theme />
@@ -47,9 +49,12 @@ export default memo(() => {
       <Source />
       <SourceName />
 
+      {/* 保留网易云 Cookie 做测试 */}
       <WyCookie />
-      {/* <KgCookie /> */} {/* 已注释 */}
-      <NavMenu />
+      {/* 酷狗 Cookie：暂时注释 */}
+      {/* <KgCookie /> */}
+      {/* 导航菜单：暂时注释 */}
+      {/* <NavMenu /> */}
     </Section>
   )
 })
