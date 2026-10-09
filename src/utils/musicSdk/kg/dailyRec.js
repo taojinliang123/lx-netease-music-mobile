@@ -17,6 +17,7 @@ const transformSong = (item, index) => {
     const songname = item.songname || item.audio_info?.songname || item.name || '未知歌曲'
     const singername = item.author_name || item.singername || item.audio_info?.singername || '未知歌手'
     const rawDuration = item.time_length || item.timelength || item.timelen || item.duration || 0
+    const album = item.album_name || item.albumname || item.audio_info?.album_name || '未知专辑'
     
     let img = item.sizable_cover || item.image || item.audio_info?.image || ''
     if (!img && hash) {
@@ -29,6 +30,8 @@ const transformSong = (item, index) => {
       singer: singername,
       source: 'kg',
       img: img,
+      interval: rawDuration, // 新增：时长
+      album: album,          // 新增：专辑名
       hash: hash,
       songmid: String(audioId),
       mixSongId: item.mixsongid || 0,
