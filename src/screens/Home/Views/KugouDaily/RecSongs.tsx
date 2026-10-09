@@ -51,11 +51,12 @@ export default memo(() => {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme['c-content-background'] }}>
-      <View style={[styles.toolbar, { backgroundColor: theme['c-primary'] }]}>
-        <TouchableOpacity style={styles.btn} onPress={() => { setTempCookie(kgCookie); setShowModal(true) }}>
+      {/* 工具栏换成和排行榜一样的主题色风格 */}
+      <View style={[styles.toolbar, { backgroundColor: theme['c-content-background'], borderBottomColor: theme['c-border-background'], borderBottomWidth: 1 }]}>
+        <TouchableOpacity style={[styles.btn, { backgroundColor: theme['c-primary'] }]} onPress={() => { setTempCookie(kgCookie); setShowModal(true) }}>
           <Text color="#fff" size={14}>设置酷狗 Cookie</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.btn} onPress={loadData}>
+        <TouchableOpacity style={[styles.btn, { backgroundColor: theme['c-primary'] }]} onPress={loadData}>
           <Text color="#fff" size={14}>刷新</Text>
         </TouchableOpacity>
       </View>
@@ -70,7 +71,7 @@ export default memo(() => {
         ref={listRef}
         listId="dailyrec_kg"
         forcePlayList={true}
-        rowType="medium"  // 核心修改：穿上“精装”衣服
+        rowType="medium"  // 精装修的核心！加上这句，封面、时长、专辑全出来
         onLoadMore={() => {}}
         checkHomePagerIdle
       />
@@ -89,7 +90,7 @@ export default memo(() => {
             />
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 15 }}>
               <TouchableOpacity style={{ padding: 10 }} onPress={() => setShowModal(false)}>
-                <Text color="#666">取消</Text>
+                <Text color={theme['c-font']}>取消</Text>
               </TouchableOpacity>
               <TouchableOpacity style={{ padding: 10 }} onPress={handleSaveCookie}>
                 <Text color={theme['c-primary']}>保存</Text>
@@ -103,8 +104,8 @@ export default memo(() => {
 })
 
 const styles = StyleSheet.create({
-  toolbar: { flexDirection: 'row', padding: 10 },
-  btn: { paddingHorizontal: 15, paddingVertical: 8, marginRight: 10, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 5 },
+  toolbar: { flexDirection: 'row', padding: 10, alignItems: 'center' },
+  btn: { paddingHorizontal: 15, paddingVertical: 8, marginRight: 10, borderRadius: 5 },
   modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
   modalContent: { width: '90%', padding: 20, borderRadius: 10 },
   input: { height: 120, borderWidth: 1, borderRadius: 5, padding: 10, textAlignVertical: 'top' },
