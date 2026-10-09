@@ -9,6 +9,14 @@ const getCookieValue = (cookieStr, key) => {
   return match ? match[2] : ''
 }
 
+// 新增：时间格式化工具，把 141 变成 "02:21"
+const formatTime = (seconds) => {
+  if (!seconds || isNaN(seconds)) return '00:00'
+  const m = Math.floor(seconds / 60)
+  const s = Math.floor(seconds % 60)
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+}
+
 // 酷狗数据转为列表格式
 const transformSong = (item, index) => {
   try {
@@ -19,14 +27,15 @@ const transformSong = (item, index) => {
     const rawDuration = item.time_length || item.timelength || item.timelen || item.duration || 0
     const album = item.album_name || item.albumname || item.audio_info?.album_name || '未知专辑'
     
-    // 封面兜底逻辑
-    let img = item.sizable_cover || item.image || item.audio_info?.image || ''
+    // 封面兜底逻辑（兼容各个酷狗接口返回的字段）
+    let img = item.sizable_cover || item.img || item.image || item.audio_info?.image || ''
     if (!img && hash) {
       img = `https://imge.kugou.com/stdmusic/400/${hash.substring(0, 8)}.jpg`
     }
 
-    // 核心修复：时长安全换算（防止毫秒直接显示成乱码数字）
-    const safeInterval = rawDuration > 10000 ? Math.floor(rawDuration / 1000) : rawDuration
+    // 核心修复：先判断是毫秒还是秒，再格式化成 03:47
+    const safeSeconds = rawDuration > 10000 ? Math.floor(rawDuration / 1000) : rawDuration
+    const interval = formatTime(safeSeconds)
 
     return {
       id: `kg__${hash}`,
@@ -34,8 +43,8 @@ const transformSong = (item, index) => {
       singer: singername,
       source: 'kg',
       img: img,
-      interval: safeInterval, // 修复后的安全时长
-      album: album,           // 专辑
+      interval: interval, // 精装修：格式化后的时间
+      album: album,
       hash: hash,
       songmid: String(audioId),
       mixSongId: item.mixsongid || 0,
