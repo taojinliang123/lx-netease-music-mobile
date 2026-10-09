@@ -2,10 +2,10 @@ import { memo, useCallback } from 'react'
 import { View } from 'react-native'
 import Text from '@/components/common/Text'
 import Input from '@/components/common/Input'
-import Button from '@/components/common/Button'
+import Button from '../../components/Button' // 修正：改用相对路径
 import { useSettingValue } from '@/store/setting/hook'
 import { setSetting } from '@/core/setting'
-import { useI18n } from '@/lang'
+import { useI18n } from '@/lang/i18n' // 修正：路径统一
 import { createStyle } from '@/utils/tools'
 import { useTheme } from '@/store/theme/hook'
 
@@ -22,7 +22,6 @@ export default memo(() => {
 
   // 点击保存时的提示（可选，防止你按了没反应以为没保存）
   const handleSave = useCallback(() => {
-    // 这里只是触发一次保存的反馈，实际已经通过 handleChange 存进去了
     setSetting('common.kg_cookie', kgCookie.trim())
   }, [kgCookie])
 
@@ -33,7 +32,7 @@ export default memo(() => {
         用于获取酷狗每日推荐，请在下方粘贴完整的 Cookie。
       </Text>
       
-      {/* 注意：这里严格使用官方的 Input 组件，它内部已经处理好了一切，绝对不会报红框 */}
+      {/* 严格使用官方的 Input 组件，内部已处理好一切，不会报红框 */}
       <View style={styles.inputWrapper}>
         <Input
           value={kgCookie}
