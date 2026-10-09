@@ -70,6 +70,7 @@ export default memo(() => {
         ref={listRef}
         listId="dailyrec_kg"
         forcePlayList={true}
+        rowType="medium"  // 核心修改：穿上“精装”衣服
         onLoadMore={() => {}}
         checkHomePagerIdle
       />
