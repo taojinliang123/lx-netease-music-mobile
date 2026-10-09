@@ -51,7 +51,7 @@ export default memo(() => {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme['c-content-background'] }}>
-      {/* 工具栏换成和排行榜一样的主题色风格 */}
+      {/* 工具栏样式对齐：去掉突兀的绿条，适配主题色 */}
       <View style={[styles.toolbar, { backgroundColor: theme['c-content-background'], borderBottomColor: theme['c-border-background'], borderBottomWidth: 1 }]}>
         <TouchableOpacity style={[styles.btn, { backgroundColor: theme['c-primary'] }]} onPress={() => { setTempCookie(kgCookie); setShowModal(true) }}>
           <Text color="#fff" size={14}>设置酷狗 Cookie</Text>
@@ -71,7 +71,7 @@ export default memo(() => {
         ref={listRef}
         listId="dailyrec_kg"
         forcePlayList={true}
-        rowType="medium"  // 精装修的核心！加上这句，封面、时长、专辑全出来
+        rowType="medium" 
         onLoadMore={() => {}}
         checkHomePagerIdle
       />
