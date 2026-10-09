@@ -7,18 +7,16 @@ import { updateSetting } from '@/core/common';
 import { createStyle, toast } from '@/utils/tools';
 import Button from '../../components/Button';
 import CookieManager from '@react-native-cookies/cookies';
+import Text from '@/components/common/Text'; // 增加引入安全 Text 组件
 
 
 
 const syncCookieToNative = async (cookie: string) => {
   const domain = 'https://music.163.com';
   try {
-    // 1. 关键步骤：清除该域名的所有原生Cookie，`true` 表示使用共享存储
     await CookieManager.clearAll(true);
 
     if (cookie) {
-      // 2. 将新的Cookie字符串拆分并逐个设置回原生Cookie Jar
-      // 这样可以确保原生层也使用最新的Cookie
       const cookiePairs = cookie.split(';').map(pair => pair.trim());
       for (const pair of cookiePairs) {
         const [name, ...valueParts] = pair.split('=');
@@ -45,9 +43,7 @@ export default memo(() => {
   const serpApiKey = useSettingValue('common.wy_serpapi_key');
 
   const setCookie = (val: string) => {
-    // 先同步到原生层
     void syncCookieToNative(val).then(() => {
-      // 再更新应用状态
       updateSetting({ 'common.wy_cookie': val });
     });
   };
@@ -63,7 +59,6 @@ export default memo(() => {
   };
 
   const handleShowLoginModal = () => {
-    // 触发全局事件
     global.app_event.emit('showWebLogin');
   };
 
@@ -93,7 +88,10 @@ export default memo(() => {
         placeholder="用于网易云搜索补充 Google 搜索结果"
       />
       <View style={styles.btnContainer}>
-        <Button onPress={handleShowLoginModal}>网页登录</Button>
+        {/* 修复点：用 Text 包裹字符串 */}
+        <Button onPress={handleShowLoginModal}>
+          <Text>网页登录</Text>
+        </Button>
       </View>
     </View>
   );
@@ -101,7 +99,6 @@ export default memo(() => {
 
 const styles = createStyle({
   content: {
-    // marginTop: 10,
   },
   btnContainer: {
     marginBottom: 5,
