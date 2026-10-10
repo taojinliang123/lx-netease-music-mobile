@@ -7,7 +7,6 @@ import { useSettingValue } from '@/store/setting/hook'
 import { updateSetting } from '@/core/common'
 import { useTheme } from '@/store/theme/hook'
 import { toast } from '@/utils/tools'
-import { handlePlay } from '@/screens/Home/Views/KugouDaily/listAction' // 假设本地有 listAction，如果没有，试试引入 @/core/player 的 handlePlay
 
 export default memo(() => {
   const listRef = useRef<OnlineListType>(null)
@@ -50,22 +49,15 @@ export default memo(() => {
     setTimeout(loadData, 500)
   }
 
-  // 修复 undefined is not a function 的核心：显式绑定播放事件
-  const handlePlayList = useCallback((index: number) => {
-    const list = listRef.current?.getList() || []
-    if (list.length > 0 && handlePlay) {
-      handlePlay('dailyrec_kg', list, index)
-    }
-  }, [])
-
   return (
     <View style={{ flex: 1, backgroundColor: theme['c-content-background'] }}>
-      <View style={[styles.toolbar, { backgroundColor: theme['c-content-background'], borderBottomColor: theme['c-border-background'], borderBottomWidth: 1 }]}>
-        <TouchableOpacity style={[styles.btn, { backgroundColor: theme['c-primary'] }]} onPress={() => { setTempCookie(kgCookie); setShowModal(true) }}>
-          <Text color="#fff" size={14}>设置酷狗 Cookie</Text>
+      {/* 顶栏精装修：去掉绿条，融入系统主题色 */}
+      <View style={[styles.toolbar, { borderBottomColor: theme['c-border-background'], borderBottomWidth: 1 }]}>
+        <TouchableOpacity style={[styles.btn, { backgroundColor: theme['c-primary-light-100-alpha-300'] }]} onPress={() => { setTempCookie(kgCookie); setShowModal(true) }}>
+          <Text color={theme['c-primary-font']} size={14}>设置酷狗 Cookie</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.btn, { backgroundColor: theme['c-primary'] }]} onPress={loadData}>
-          <Text color="#fff" size={14}>刷新</Text>
+        <TouchableOpacity style={[styles.btn, { backgroundColor: theme['c-primary-light-100-alpha-300'] }]} onPress={loadData}>
+          <Text color={theme['c-primary-font']} size={14}>刷新</Text>
         </TouchableOpacity>
       </View>
 
@@ -78,7 +70,7 @@ export default memo(() => {
       <OnlineList
         ref={listRef}
         listId="dailyrec_kg"
-        onPlayList={handlePlayList} // 显式绑定，防止崩溃
+        forcePlayList={true}
         rowType="medium" 
         onLoadMore={() => {}}
         checkHomePagerIdle
