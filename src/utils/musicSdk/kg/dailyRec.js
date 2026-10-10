@@ -2,73 +2,12 @@ import { httpFetch } from '../../request'
 import settingState from "@/store/setting/state"
 import { signatureParams } from './util'
 import leaderboard from './leaderboard'
+import songList from './songList' // 抄作业：引入洛雪的歌单工具
 
 const getCookieValue = (cookieStr, key) => {
   if (!cookieStr) return ''
   const match = cookieStr.match(new RegExp(`(^|;\\s*)${key}=([^;]*)`))
   return match ? match[2] : ''
-}
-
-// 时长格式化工具
-const formatTime = (seconds) => {
-  if (!seconds || isNaN(seconds)) return '00:00'
-  const m = Math.floor(seconds / 60)
-  const s = Math.floor(seconds % 60)
-  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
-}
-
-// 酷狗数据转为列表格式
-const transformSong = (item, index) => {
-  try {
-    const hash = item.hash || item.audio_info?.hash || ''
-    const audioId = item.audio_id || item.audio_info?.audio_id || 0
-    const songname = item.songname || item.audio_info?.songname || item.name || '未知歌曲'
-    const singername = item.author_name || item.singername || item.audio_info?.singername || '未知歌手'
-    const rawDuration = item.time_length || item.timelength || item.timelen || item.duration || 0
-    const album = item.album_name || item.albumname || item.audio_info?.album_name || '未知专辑'
-    
-    // 终极封面兜底逻辑：遍历所有可能的酷狗封面字段
-    let img = item.sizable_cover || 
-              item.img || 
-              item.image || 
-              item.album_info?.sizable_cover || 
-              item.album_info?.img || 
-              item.audio_info?.image || 
-              item.audio_info?.img || 
-              ''
-              
-    // 如果都没有，用 hash 强行拼接（酷狗老传统）
-    if (!img && hash) {
-      img = `https://imge.kugou.com/stdmusic/400/${hash.substring(0, 8)}.jpg`
-    }
-
-    const safeSeconds = rawDuration > 10000 ? Math.floor(rawDuration / 1000) : rawDuration
-    const interval = formatTime(safeSeconds)
-
-    return {
-      id: `kg__${hash}`,
-      name: songname,
-      singer: singername,
-      source: 'kg',
-      img: img,
-      interval: interval,
-      album: album,
-      hash: hash,
-      songmid: String(audioId),
-      mixSongId: item.mixsongid || 0,
-      types: [{ type: '128k', size: null }],
-      _types: { '128k': { size: null } },
-      meta: {
-        songId: String(audioId),
-        hash: hash,
-        picUrl: img,
-        qualitys: [{ type: '128k', size: null }],
-        _qualitys: { '128k': { size: null } },
-      },
-    }
-  } catch (e) {
-    return null
-  }
 }
 
 export default {
@@ -107,7 +46,33 @@ export default {
       if (statusCode === 200 && (body?.status === 1 || body?.error_code === 0)) {
         const rawSongs = body?.data?.song_list || body?.data?.songs || body?.data?.list || []
         if (rawSongs.length > 0) {
-          const listData = rawSongs.map((item, i) => transformSong(item, i)).filter(Boolean)
+          // 抄作业：调用洛雪现成的 getMusicInfos，它会自动帮我们补全封面和专辑信息！
+          try {
+            const enrichedList = await songList.getMusicInfos(rawSongs)
+            if (enrichedList && enrichedList.length > 0) {
+              return { list: enrichedList, source: 'kg' }
+            }
+          } catch (err) {
+            console.log('[KG DailyRec] 补全封面失败，降级使用原始映射', err)
+          }
+          
+          // 如果补全失败，还是用原来的老方法兜底，保证绝不空白
+          const listData = rawSongs.map((item, i) => ({
+            id: `kg__${item.hash || item.audio_info?.hash}`,
+            name: item.songname || item.audio_info?.songname || '未知歌曲',
+            singer: item.author_name || item.audio_info?.singername || '未知歌手',
+            source: 'kg',
+            hash: item.hash || item.audio_info?.hash,
+            songmid: String(item.audio_id || item.audio_info?.audio_id || 0),
+            types: [{ type: '128k', size: null }],
+            _types: { '128k': { size: null } },
+            meta: {
+              songId: String(item.audio_id || item.audio_info?.audio_id || 0),
+              hash: item.hash || item.audio_info?.hash,
+              qualitys: [{ type: '128k', size: null }],
+              _qualitys: { '128k': { size: null } },
+            },
+          })).filter(Boolean)
           return { list: listData, source: 'kg' }
         }
       }
