@@ -7,14 +7,16 @@ import { updateSetting } from '@/core/common';
 import { createStyle, toast } from '@/utils/tools';
 import Button from '../../components/Button';
 import CookieManager from '@react-native-cookies/cookies';
-import Text from '@/components/common/Text';
 
-// 注意：这个方法只给网易云用，酷狗千万别调用！
 const syncCookieToNative = async (cookie: string) => {
   const domain = 'https://music.163.com';
   try {
+    // 1. 关键步骤：清除该域名的所有原生Cookie，`true` 表示使用共享存储
     await CookieManager.clearAll(true);
+
     if (cookie) {
+      // 2. 将新的Cookie字符串拆分并逐个设置回原生Cookie Jar
+      // 这样可以确保原生层也使用最新的Cookie
       const cookiePairs = cookie.split(';').map(pair => pair.trim());
       for (const pair of cookiePairs) {
         const [name, ...valueParts] = pair.split('=');
@@ -42,12 +44,14 @@ export default memo(() => {
   const cookie = useSettingValue('common.wy_cookie');
   const serpApiKey = useSettingValue('common.wy_serpapi_key');
   
-  // 👇 新增：酷狗状态读取
+  // 酷狗状态
   const kgCookie = useSettingValue('common.kg_cookie') || '';
 
   // 网易云保存逻辑（带原生同步）
   const setCookie = (val: string) => {
+    // 先同步到原生层
     void syncCookieToNative(val).then(() => {
+      // 再更新应用状态
       updateSetting({ 'common.wy_cookie': val });
     });
   };
@@ -62,13 +66,14 @@ export default memo(() => {
     updateSetting({ 'common.wy_serpapi_key': text.trim() });
   };
 
-  // 👇 新增：酷狗保存逻辑（绝对不碰原生同步，只写JS内存）
+  // 酷狗保存逻辑（绝对不碰原生同步，只写JS内存，防止报同步失败）
   const handleKgCookieChanged: InputItemProps['onChanged'] = (text, callback) => {
     callback(text);
     updateSetting({ 'common.kg_cookie': text.trim() });
   };
 
   const handleShowLoginModal = () => {
+    // 触发全局事件
     global.app_event.emit('showWebLogin');
   };
 
@@ -76,6 +81,7 @@ export default memo(() => {
     const handleCookieSet = (cookie: string) => {
       setCookie(cookie);
     };
+
     global.app_event.on('wy-cookie-set', handleCookieSet);
     return () => {
       global.app_event.off('wy-cookie-set', handleCookieSet);
@@ -84,6 +90,7 @@ export default memo(() => {
 
   return (
     <View style={styles.content}>
+      {/* ============ 网易云专区 ============ */}
       <InputItem
         value={cookie}
         label={t('setting_basic_wy_cookie')}
@@ -97,28 +104,28 @@ export default memo(() => {
         placeholder="用于网易云搜索补充 Google 搜索结果"
       />
       
-      {/* 👇 新增：酷狗 Cookie 输入框，直接使用最安全的 InputItem */}
+      {/* 网易网页登录按钮（已移到酷狗输入框上方） */}
+      <View style={styles.btnContainer}>
+        <Button onPress={handleShowLoginModal}>网易网页登录</Button>
+      </View>
+
+      {/* ============ 酷狗专区 ============ */}
       <InputItem
         value={kgCookie}
         label="酷狗音乐 Cookie"
         onChanged={handleKgCookieChanged}
         placeholder="粘贴完整的酷狗 Cookie（kg_mid=...; kg_dfid=...）"
       />
-
-      <View style={styles.btnContainer}>
-        <Button onPress={handleShowLoginModal}>
-          <Text>网页登录</Text>
-        </Button>
-      </View>
     </View>
   );
 });
 
 const styles = createStyle({
   content: {
+    // marginTop: 10,
   },
   btnContainer: {
-    marginBottom: 5,
+    marginBottom: 15, // 调整了间距，让按钮和下方酷狗输入框有一点呼吸感
     paddingLeft: 20,
     flexDirection: 'row',
   },
