@@ -16,6 +16,8 @@ export default memo(() => {
   const [tempCookie, setTempCookie] = useState('')
   
   const kgCookie = useSettingValue('common.kg_cookie') || ''
+  // 🚀 核心对接：读取全局设置里的“自动切换播放列表”开关
+  const isAutoPlay = useSettingValue('common.isAutoPlay') || false
   const theme = useTheme()
 
   const loadData = useCallback(() => {
@@ -70,7 +72,7 @@ export default memo(() => {
       <OnlineList
         ref={listRef}
         listId="dailyrec_kg"
-        forcePlayList={true}
+        forcePlayList={isAutoPlay} // 🚀 核心修改：不再是写死的 true，而是跟随系统设置
         rowType="medium" 
         onLoadMore={() => {}}
         checkHomePagerIdle
