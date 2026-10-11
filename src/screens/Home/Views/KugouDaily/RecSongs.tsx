@@ -7,6 +7,10 @@ import { useSettingValue } from '@/store/setting/hook'
 import { updateSetting } from '@/core/common'
 import { useTheme } from '@/store/theme/hook'
 import { toast } from '@/utils/tools'
+// 🚀 新增：引入播放列表工具
+import { setTempList } from '@/core/list'
+import { playList } from '@/core/player/player'
+import { LIST_IDS } from '@/config/constant'
 
 export default memo(() => {
   const listRef = useRef<OnlineListType>(null)
@@ -16,8 +20,6 @@ export default memo(() => {
   const [tempCookie, setTempCookie] = useState('')
   
   const kgCookie = useSettingValue('common.kg_cookie') || ''
-  // 🚀 核心对接：读取全局设置里的“自动切换播放列表”开关
-  const isAutoPlay = useSettingValue('common.isAutoPlay') || false
   const theme = useTheme()
 
   const loadData = useCallback(() => {
@@ -51,9 +53,18 @@ export default memo(() => {
     setTimeout(loadData, 500)
   }
 
+  // 🚀 核心对接：点击列表歌曲时，只有开关打开时才会走这里替换列表
+  const handlePlayList = useCallback((index: number) => {
+    const currentList = listRef.current?.getList() || []
+    if (currentList.length === 0) return
+    const tempListId = 'dailyrec_kg'
+    void setTempList(tempListId, [...currentList]).then(() => {
+      void playList(LIST_IDS.TEMP, index)
+    })
+  }, [])
+
   return (
     <View style={{ flex: 1, backgroundColor: theme['c-content-background'] }}>
-      {/* 顶栏精装修：去掉绿条，融入系统主题色 */}
       <View style={[styles.toolbar, { borderBottomColor: theme['c-border-background'], borderBottomWidth: 1 }]}>
         <TouchableOpacity style={[styles.btn, { backgroundColor: theme['c-primary-light-100-alpha-300'] }]} onPress={() => { setTempCookie(kgCookie); setShowModal(true) }}>
           <Text color={theme['c-primary-font']} size={14}>设置酷狗 Cookie</Text>
@@ -72,7 +83,7 @@ export default memo(() => {
       <OnlineList
         ref={listRef}
         listId="dailyrec_kg"
-        forcePlayList={isAutoPlay} // 🚀 核心修改：不再是写死的 true，而是跟随系统设置
+        onPlayList={handlePlayList}  // 🚀 核心修改：不再是 forcePlayList，而是由开关动态决定
         rowType="medium" 
         onLoadMore={() => {}}
         checkHomePagerIdle
